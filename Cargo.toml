@@ -1,0 +1,17 @@
+[workspace]
+resolver = "2"
+members = [
+    "contracts/router",
+    "contracts/paymaster",
+    "contracts/compliance",
+]
+
+[workspace.package]
+version = "0.1.0"
+authors = ["Ipramking <inioluwasamuel.13pram@gmail.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[workspace.dependencies]
+soroban-sdk = "22.0.0"
+soroban-sdk-auth = "22.0.0"

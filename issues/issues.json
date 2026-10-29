@@ -1,0 +1,2082 @@
+[
+  {
+    "id": 1,
+    "title": "Implement dynamic slippage protection bounds check on MeridianRouter",
+    "category": "Smart Contracts (Soroban & Rust)",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "contracts"
+    ],
+    "body": "### Problem\nThe current MeridianRouter implementation verifies a basic minimum output amount, but lacks dynamic basis-point slippage protection based on real-time pool depth.\n\n### Proposed Solution\nAdd a slippage threshold validator in `contracts/router/src/lib.rs` that calculates the maximum allowable deviation in basis points against expected output before routing to Soroswap.\n\n### Acceptance Criteria\n- [ ] Add `max_slippage_bps` parameter in `CrossChainIntent`\n- [ ] Calculate price impact threshold in `execute_intent`\n- [ ] Revert with `RouterError::SlippageExceeded` if execution violates the bound\n- [ ] Add unit test in `test.rs` covering high price impact scenarios\n\n### Files to Touch\n- `contracts/router/src/lib.rs`\n- `contracts/router/src/types.rs`\n- `contracts/router/src/test.rs`"
+  },
+  {
+    "id": 2,
+    "title": "Add reentrancy guard mechanism to execute_intent in MeridianRouter",
+    "category": "Smart Contracts (Soroban & Rust)",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "contracts"
+    ],
+    "body": "### Problem\nCross-contract calls to Soroswap and external yield vaults introduce reentrancy risks if an untrusted contract interacts with the router state before execution completes.\n\n### Proposed Solution\nIntroduce a mutex state flag (`DataKey::Locked`) stored in Soroban instance storage that is checked and flipped during invocation.\n\n### Acceptance Criteria\n- [ ] Define `DataKey::Locked` in `types.rs`\n- [ ] Check mutex state at start of `execute_intent` and release on exit\n- [ ] Ensure mutex releases even on early error return\n- [ ] Add unit test simulating reentrancy attempt\n\n### Files to Touch\n- `contracts/router/src/lib.rs`\n- `contracts/router/src/types.rs`\n- `contracts/router/src/test.rs`"
+  },
+  {
+    "id": 3,
+    "title": "Support multi-hop route execution with 3+ intermediate pools on Soroban",
+    "category": "Smart Contracts (Soroban & Rust)",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "contracts"
+    ],
+    "body": "### Problem\nDirect pairs for exotic Stellar assets and RWAs often do not exist with USDC. Swaps must route through intermediate pools (e.g. USDC -> XLM -> AQUA -> Target Asset).\n\n### Proposed Solution\nEnhance `MeridianRouter` to accept an arbitrary array of token addresses in `swap_path` and validate each hop against Soroswap pool existence before executing.\n\n### Acceptance Criteria\n- [ ] Support vector paths with length >= 2\n- [ ] Validate intermediate token balances between hops\n- [ ] Ensure intermediate tokens are not drained or retained in contract\n- [ ] Add test for 3-hop swap execution with mock pool pairs\n\n### Files to Touch\n- `contracts/router/src/lib.rs`\n- `contracts/router/src/test.rs`"
+  },
+  {
+    "id": 4,
+    "title": "Implement deadline extension mechanism with timelocked admin recovery",
+    "category": "Smart Contracts (Soroban & Rust)",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "contracts"
+    ],
+    "body": "### Problem\nIf a cross-chain transfer experiences severe network congestion on the source chain, the transaction deadline on Stellar may expire before the relayer can submit it.\n\n### Proposed Solution\nAdd an emergency recovery method `recover_expired_intent` allowing the sender or designated recipient to recover funds after a 48-hour timelock.\n\n### Acceptance Criteria\n- [ ] Implement `recover_expired_intent(message_hash, recipient)`\n- [ ] Enforce 48-hour timelock past the original deadline\n- [ ] Verify message has not already been processed\n- [ ] Emit `IntentRecovered` event\n\n### Files to Touch\n- `contracts/router/src/lib.rs`\n- `contracts/router/src/errors.rs`\n- `contracts/router/src/test.rs`"
+  },
+  {
+    "id": 5,
+    "title": "Create Soroban contract event schema for institutional audit trails",
+    "category": "Smart Contracts (Soroban & Rust)",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "contracts"
+    ],
+    "body": "### Problem\nInstitutional auditors require standardized, indexable event topics to track the lifecycle of tokenized assets and cross-chain fund movements.\n\n### Proposed Solution\nStandardize event topics across all contracts using typed symbols (`intent_submitted`, `swap_settled`, `vault_deposited`) containing ledger timestamp and sequence.\n\n### Acceptance Criteria\n- [ ] Define event schema structs in `types.rs`\n- [ ] Publish structured topics in `execute_intent` and `route_to_vault`\n- [ ] Verify event topic indexing in contract tests\n\n### Files to Touch\n- `contracts/router/src/types.rs`\n- `contracts/router/src/lib.rs`\n- `contracts/router/src/test.rs`"
+  },
+  {
+    "id": 6,
+    "title": "Add emergency circuit breaker (pause_swaps / unpause_swaps)",
+    "category": "Smart Contracts (Soroban & Rust)",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "contracts"
+    ],
+    "body": "### Problem\nIf an exploit is detected in a connected DEX pool or bridge, the router must immediately halt new swap executions while preserving user withdrawal capabilities.\n\n### Proposed Solution\nExpose admin-controlled pause switches with fine-grained control: pausing swaps while allowing direct USDC passthrough.\n\n### Acceptance Criteria\n- [ ] Add `pause_swaps` and `unpause_swaps` in `MeridianRouter`\n- [ ] Verify admin signature requirement\n- [ ] Revert `execute_intent` if paused with specific `RouterError::ContractPaused`\n- [ ] Add unit test verifying unauthorized account cannot pause\n\n### Files to Touch\n- `contracts/router/src/lib.rs`\n- `contracts/router/src/errors.rs`\n- `contracts/router/src/test.rs`"
+  },
+  {
+    "id": 7,
+    "title": "Implement custom error reporting for partial Soroswap route failures",
+    "category": "Smart Contracts (Soroban & Rust)",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "contracts"
+    ],
+    "body": "### Problem\nWhen a Soroswap swap reverts, the router currently bubbles up a generic Soroban host error, making it difficult for the relayer and frontend to determine the cause.\n\n### Proposed Solution\nCatch invocations and map underlying Soroswap failure codes to distinct `RouterError` enum variants.\n\n### Acceptance Criteria\n- [ ] Add specific error codes in `errors.rs` for insufficient pool liquidity, deadline exceeded, and pair not found\n- [ ] Map invoke contract errors to descriptive router errors\n- [ ] Add test cases simulating failed pool calls\n\n### Files to Touch\n- `contracts/router/src/errors.rs`\n- `contracts/router/src/lib.rs`"
+  },
+  {
+    "id": 8,
+    "title": "Support fee-on-transfer tokens inside MeridianRouter",
+    "category": "Smart Contracts (Soroban & Rust)",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "contracts"
+    ],
+    "body": "### Problem\nSome experimental Stellar tokens or tax-bearing community tokens take a deduction upon transfer, which breaks naive accounting assumptions of `amount_in == balance_delta`.\n\n### Proposed Solution\nRecord contract token balance before and after token transfers to compute actual received amounts dynamically.\n\n### Acceptance Criteria\n- [ ] Query balance before and after `transfer`\n- [ ] Use delta for downstream swap amount calculations\n- [ ] Handle potential precision truncation gracefully\n- [ ] Add unit tests simulating a 1% fee-on-transfer mock token\n\n### Files to Touch\n- `contracts/router/src/lib.rs`\n- `contracts/router/src/test.rs`"
+  },
+  {
+    "id": 9,
+    "title": "Create Soroban mock contracts for SoroswapRouter for unit testing",
+    "category": "Smart Contracts (Soroban & Rust)",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "contracts"
+    ],
+    "body": "### Problem\nUnit tests currently rely on generic contract IDs, which prevents testing real swap balance changes and return vectors in isolated test environments.\n\n### Proposed Solution\nCreate a lightweight `MockSoroswapRouter` contract in testutils that mimics the Soroswap Router trait and updates real mock token balances.\n\n### Acceptance Criteria\n- [ ] Implement `MockSoroswapRouter` with `swap_exact_tokens_for_tokens`\n- [ ] Update mock token balances during swap execution\n- [ ] Integrate into `contracts/router/src/test.rs`\n- [ ] Enable end-to-end multi-token swap verification in test suite\n\n### Files to Touch\n- `contracts/router/src/test.rs`"
+  },
+  {
+    "id": 10,
+    "title": "Add gas consumption profiling for Soroban WASM execution",
+    "category": "Smart Contracts (Soroban & Rust)",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "contracts"
+    ],
+    "body": "### Problem\nSoroban meters CPU instructions and memory consumption for every contract call. Inefficiencies can raise transaction fees for users.\n\n### Proposed Solution\nCreate a profiling test script using Soroban SDK test utilities that logs CPU instructions and memory read/write bytes for key execution paths.\n\n### Acceptance Criteria\n- [ ] Implement benchmark tests using `env.budget()`\n- [ ] Print CPU and memory metrics for single-hop vs multi-hop intent\n- [ ] Ensure total CPU consumption remains under 2,000,000 instructions\n- [ ] Document gas baseline in `ARCHITECTURE.md`\n\n### Files to Touch\n- `contracts/router/src/test.rs`\n- `ARCHITECTURE.md`"
+  },
+  {
+    "id": 11,
+    "title": "Implement time-weighted average price (TWAP) oracle verification hook",
+    "category": "Smart Contracts (Soroban & Rust)",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "contracts"
+    ],
+    "body": "### Problem\nFlash loan attacks or temporary low liquidity on AMM pools could distort spot prices and cause large slippage for incoming cross-chain users.\n\n### Proposed Solution\nIntegrate an optional TWAP oracle verification interface that checks spot swap output against a trusted price oracle window before executing.\n\n### Acceptance Criteria\n- [ ] Define `OracleTrait` interface in router\n- [ ] Query oracle price before invoking pool swap\n- [ ] Revert if spot execution price deviates by more than 3% from oracle price\n- [ ] Add unit tests with mock oracle\n\n### Files to Touch\n- `contracts/router/src/lib.rs`\n- `contracts/router/src/types.rs`\n- `contracts/router/src/test.rs`"
+  },
+  {
+    "id": 12,
+    "title": "Create admin role delegation using Soroban custom authorization",
+    "category": "Smart Contracts (Soroban & Rust)",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "contracts"
+    ],
+    "body": "### Problem\nA single admin address creates operational bottlenecks when managing multiple router functions (parameter updates vs pausing vs emergency withdrawals).\n\n### Proposed Solution\nImplement role-based authorization separating `OPERATOR_ROLE` (can pause/unpause), `FEE_MANAGER_ROLE` (can update relayer fee caps), and `SUPER_ADMIN` (can upgrade contract).\n\n### Acceptance Criteria\n- [ ] Define roles enum in `types.rs`\n- [ ] Implement `grant_role` and `revoke_role`\n- [ ] Enforce specific role requirement on router functions\n- [ ] Add unit tests testing role boundaries\n\n### Files to Touch\n- `contracts/router/src/lib.rs`\n- `contracts/router/src/types.rs`\n- `contracts/router/src/test.rs`"
+  },
+  {
+    "id": 13,
+    "title": "Implement atomic batch intent execution (execute_batch_intents)",
+    "category": "Smart Contracts (Soroban & Rust)",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "contracts"
+    ],
+    "body": "### Problem\nRelayers submitting individual transactions for every incoming cross-chain intent consume unnecessary envelope overhead on the Stellar ledger.\n\n### Proposed Solution\nAdd `execute_batch_intents(Vec<CrossChainIntent>, Vec<BytesN<32>>, relayer)` to process multiple cross-chain settlements in a single atomic invocation.\n\n### Acceptance Criteria\n- [ ] Process up to 5 intents in a single call\n- [ ] If an individual swap fails due to slippage, skip without reverting the entire batch\n- [ ] Emit batch summary events with success/failure bitmap\n- [ ] Add unit tests for batch execution\n\n### Files to Touch\n- `contracts/router/src/lib.rs`\n- `contracts/router/src/test.rs`"
+  },
+  {
+    "id": 14,
+    "title": "Add non-custodial token recovery function for accidental deposits",
+    "category": "Smart Contracts (Soroban & Rust)",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "contracts"
+    ],
+    "body": "### Problem\nUsers occasionally transfer arbitrary tokens directly to contract addresses without calling the intent execution methods, causing stuck balances.\n\n### Proposed Solution\nExpose an admin-controlled recovery function allowing stuck tokens (excluding USDC and operational reserves) to be returned to verified owners.\n\n### Acceptance Criteria\n- [ ] Implement `rescue_tokens(token, to, amount)`\n- [ ] Prevent rescue of locked user collateral or active USDC deposits\n- [ ] Require `admin.require_auth()`\n- [ ] Add unit tests verifying unauthorized caller is rejected\n\n### Files to Touch\n- `contracts/router/src/lib.rs`\n- `contracts/router/src/test.rs`"
+  },
+  {
+    "id": 15,
+    "title": "Implement contract upgradeability pattern using Soroban state migration",
+    "category": "Smart Contracts (Soroban & Rust)",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "contracts"
+    ],
+    "body": "### Problem\nAs the protocol evolves and connects with new bridges or DEXes, the router contract WASM must be upgradeable without losing configuration and processed message state.\n\n### Proposed Solution\nImplement the standard Soroban upgrade method `upgrade(env, new_wasm_hash)` with admin authorization and state compatibility verification.\n\n### Acceptance Criteria\n- [ ] Add `upgrade` function in `MeridianRouter`\n- [ ] Enforce admin multi-sig or timelocked auth\n- [ ] Verify instance storage persists through WASM upgrade in test suite\n- [ ] Emit `ContractUpgraded(new_wasm_hash)` event\n\n### Files to Touch\n- `contracts/router/src/lib.rs`\n- `contracts/router/src/test.rs`"
+  },
+  {
+    "id": 16,
+    "title": "Optimize Soroban temporary vs persistent storage usage in MeridianRouter",
+    "category": "Smart Contracts (Soroban & Rust)",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "contracts"
+    ],
+    "body": "### Problem\nSoroban temporary storage is significantly cheaper in rent fees than persistent storage, but has a TTL that must be bumped if needed.\n\n### Proposed Solution\nAudit storage keys: keep immutable config in instance storage, migrate `ProcessedMessage` hashes to temporary storage with automated TTL bumping.\n\n### Acceptance Criteria\n- [ ] Move replay protection hashes to temporary storage\n- [ ] Extend TTL by 500,000 ledgers upon creation\n- [ ] Benchmark state rent reduction\n- [ ] Verify test suite passes with storage tier separation\n\n### Files to Touch\n- `contracts/router/src/lib.rs`\n- `contracts/router/src/types.rs`"
+  },
+  {
+    "id": 17,
+    "title": "Add contract telemetry and execution metrics logging",
+    "category": "Smart Contracts (Soroban & Rust)",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "contracts"
+    ],
+    "body": "### Problem\nOff-chain indexers need easy access to transaction throughput, volume transferred, and cumulative fees generated without re-parsing raw transaction envelopes.\n\n### Proposed Solution\nImplement contract-level counters that increment on every successful intent execution and expose public view methods.\n\n### Acceptance Criteria\n- [ ] Add `total_volume_usdc` and `total_intents_executed` counters\n- [ ] Increment in `execute_intent`\n- [ ] Expose `get_telemetry() -> TelemetryStats`\n- [ ] Add unit tests verifying counter increments\n\n### Files to Touch\n- `contracts/router/src/lib.rs`\n- `contracts/router/src/types.rs`\n- `contracts/router/src/test.rs`"
+  },
+  {
+    "id": 18,
+    "title": "Support custom recipient memo attachment for Stellar classic accounts",
+    "category": "Smart Contracts (Soroban & Rust)",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "contracts"
+    ],
+    "body": "### Problem\nWhen routing output to a centralized exchange (e.g. Binance, Coinbase) or classic Stellar wallet, an integer or text memo is required to credit the end-user.\n\n### Proposed Solution\nExtend `CrossChainIntent` to support optional memo payloads and forward them when transferring output tokens to classic Stellar accounts.\n\n### Acceptance Criteria\n- [ ] Add `memo: Option<Bytes>` in `CrossChainIntent`\n- [ ] Validate memo format (Id, Text, or Hash)\n- [ ] Test transferring to simulated exchange address with memo verification\n\n### Files to Touch\n- `contracts/router/src/types.rs`\n- `contracts/router/src/lib.rs`\n- `contracts/router/src/test.rs`"
+  },
+  {
+    "id": 19,
+    "title": "Implement fractional relayer fee calculation with overflow protection",
+    "category": "Smart Contracts (Soroban & Rust)",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "contracts"
+    ],
+    "body": "### Problem\nRelayer fee arithmetic using 128-bit integers must be strictly protected against multiplication overflows and division-by-zero errors.\n\n### Proposed Solution\nUse checked math (`checked_mul`, `checked_div`) for fee basis points calculations, with fallback error codes.\n\n### Acceptance Criteria\n- [ ] Replace standard arithmetic operators with checked math methods\n- [ ] Add unit test with maximum i128 values verifying safe error return\n- [ ] Document fee formula in code comments\n\n### Files to Touch\n- `contracts/router/src/lib.rs`\n- `contracts/router/src/errors.rs`"
+  },
+  {
+    "id": 20,
+    "title": "Add support for Phoenix DEX CLMM pool swaps in routing logic",
+    "category": "Smart Contracts (Soroban & Rust)",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "contracts"
+    ],
+    "body": "### Problem\nPhoenix DEX provides Concentrated Liquidity Market Maker (CLMM) pools on Soroban which often offer lower slippage for stablecoin and RWA pairs than standard constant-product AMMs.\n\n### Proposed Solution\nAdd an adapter in `MeridianRouter` to route trades through Phoenix CLMM pools when selected in the swap path.\n\n### Acceptance Criteria\n- [ ] Define `PhoenixRouterClient` trait interface\n- [ ] Implement conditional branch in routing logic for CLMM swap execution\n- [ ] Verify slippage bounds on CLMM tick ranges\n- [ ] Add unit test with mock Phoenix pool\n\n### Files to Touch\n- `contracts/router/src/lib.rs`\n- `contracts/router/src/types.rs`\n- `contracts/router/src/test.rs`"
+  },
+  {
+    "id": 21,
+    "title": "Implement maximum trade size restrictions per transaction",
+    "category": "Smart Contracts (Soroban & Rust)",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "contracts"
+    ],
+    "body": "### Problem\nDuring initial mainnet launch, protocol risk should be mitigated by capping the maximum volume allowed per single cross-chain intent.\n\n### Proposed Solution\nAdd an admin-configurable `max_trade_size_usdc` parameter to `RouterConfig` that rejects oversized transactions.\n\n### Acceptance Criteria\n- [ ] Add `max_trade_size` in `RouterConfig`\n- [ ] Validate `intent.amount_in <= config.max_trade_size`\n- [ ] Expose admin method `set_max_trade_size(new_size)`\n- [ ] Add unit tests for boundary checks\n\n### Files to Touch\n- `contracts/router/src/lib.rs`\n- `contracts/router/src/types.rs`\n- `contracts/router/src/test.rs`"
+  },
+  {
+    "id": 22,
+    "title": "Add rate-limiting per account on Soroban contract level",
+    "category": "Smart Contracts (Soroban & Rust)",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "contracts"
+    ],
+    "body": "### Problem\nMalicious actors could spam small transactions to overwhelm the relayer and deplete Paymaster reserves.\n\n### Proposed Solution\nImplement a sliding-window rate limiter tracking transaction frequency per destination address within a given ledger block window.\n\n### Acceptance Criteria\n- [ ] Store last execution ledger sequence per user\n- [ ] Enforce minimum ledger delay between consecutive executions\n- [ ] Allow admin accounts to bypass rate limits\n- [ ] Add unit test verifying rate limit triggering and cooldown\n\n### Files to Touch\n- `contracts/router/src/lib.rs`\n- `contracts/router/src/types.rs`\n- `contracts/router/src/test.rs`"
+  },
+  {
+    "id": 23,
+    "title": "Implement minimum liquidity threshold verification before pool swap",
+    "category": "Smart Contracts (Soroban & Rust)",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "contracts"
+    ],
+    "body": "### Problem\nIf a Soroswap pool has drained or been manipulated, executing a swap can result in catastrophic slippage even with static min_out checks.\n\n### Proposed Solution\nQuery total pool reserve depth before executing the swap, reverting if the swap size exceeds 10% of total pool reserves.\n\n### Acceptance Criteria\n- [ ] Fetch pool reserves before swap execution\n- [ ] Check swap size to reserve ratio <= 10%\n- [ ] Return descriptive error `RouterError::InsufficientPoolLiquidity`\n- [ ] Add unit test with shallow mock pool\n\n### Files to Touch\n- `contracts/router/src/lib.rs`\n- `contracts/router/src/errors.rs`\n- `contracts/router/src/test.rs`"
+  },
+  {
+    "id": 24,
+    "title": "Add unit tests for zero-amount edge cases and underflow attacks",
+    "category": "Smart Contracts (Soroban & Rust)",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "contracts"
+    ],
+    "body": "### Problem\nMalicious input payloads with zero amounts or negative numbers could trigger unexpected arithmetic states.\n\n### Proposed Solution\nExhaustively test all contract entrypoints with 0, negative values, and minimum boundary integers.\n\n### Acceptance Criteria\n- [ ] Test `execute_intent` with `amount_in = 0`\n- [ ] Test `execute_intent` with `min_amount_out = 0`\n- [ ] Test `relayer_fee > amount_in`\n- [ ] Verify all test cases revert with expected error enums\n\n### Files to Touch\n- `contracts/router/src/test.rs`"
+  },
+  {
+    "id": 25,
+    "title": "Implement formal verification specifications using Certora/SMT-solver",
+    "category": "Smart Contracts (Soroban & Rust)",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "contracts"
+    ],
+    "body": "### Problem\nMission-critical financial contracts managing multi-million-dollar cross-chain transfers require formal proof that invariant rules cannot be broken.\n\n### Proposed Solution\nWrite formal verification rules proving: 1) Contract token balance is strictly conserved, 2) Funds are never transferred without authorization, 3) Processed messages cannot be replayed.\n\n### Acceptance Criteria\n- [ ] Write property specifications in CVL or Rust invariant assertions\n- [ ] Run automated SMT-solver verification\n- [ ] Document verified invariants in `SECURITY.md`\n\n### Files to Touch\n- `contracts/router/src/test.rs`\n- `SECURITY.md`"
+  },
+  {
+    "id": 26,
+    "title": "Implement automated rebalancing trigger based on accumulated USDC threshold",
+    "category": "Paymaster & Zero-XLM Gasless Infrastructure",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "paymaster"
+    ],
+    "body": "### Overview\nImplement automated rebalancing trigger based on accumulated USDC threshold within the **Paymaster & Zero-XLM Gasless Infrastructure** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 27,
+    "title": "Add support for alternative fee tokens (e.g. EURC) in MeridianPaymaster",
+    "category": "Paymaster & Zero-XLM Gasless Infrastructure",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "paymaster"
+    ],
+    "body": "### Overview\nAdd support for alternative fee tokens (e.g. EURC) in MeridianPaymaster within the **Paymaster & Zero-XLM Gasless Infrastructure** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 28,
+    "title": "Create daily sponsorship quotas per recipient address to prevent sybil drain",
+    "category": "Paymaster & Zero-XLM Gasless Infrastructure",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "paymaster"
+    ],
+    "body": "### Overview\nCreate daily sponsorship quotas per recipient address to prevent sybil drain within the **Paymaster & Zero-XLM Gasless Infrastructure** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 29,
+    "title": "Implement fee markup discount tiers for high-volume traders",
+    "category": "Paymaster & Zero-XLM Gasless Infrastructure",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "paymaster"
+    ],
+    "body": "### Overview\nImplement fee markup discount tiers for high-volume traders within the **Paymaster & Zero-XLM Gasless Infrastructure** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 30,
+    "title": "Add admin withdrawal function for surplus XLM in Paymaster",
+    "category": "Paymaster & Zero-XLM Gasless Infrastructure",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "paymaster"
+    ],
+    "body": "### Overview\nAdd admin withdrawal function for surplus XLM in Paymaster within the **Paymaster & Zero-XLM Gasless Infrastructure** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 31,
+    "title": "Create Paymaster telemetry event emitting gas saved per transaction",
+    "category": "Paymaster & Zero-XLM Gasless Infrastructure",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "paymaster"
+    ],
+    "body": "### Overview\nCreate Paymaster telemetry event emitting gas saved per transaction within the **Paymaster & Zero-XLM Gasless Infrastructure** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 32,
+    "title": "Implement signature-based fee sponsorship voucher verification",
+    "category": "Paymaster & Zero-XLM Gasless Infrastructure",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "paymaster"
+    ],
+    "body": "### Overview\nImplement signature-based fee sponsorship voucher verification within the **Paymaster & Zero-XLM Gasless Infrastructure** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 33,
+    "title": "Add unit tests for Paymaster rebalance with negative slippage",
+    "category": "Paymaster & Zero-XLM Gasless Infrastructure",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "paymaster"
+    ],
+    "body": "### Overview\nAdd unit tests for Paymaster rebalance with negative slippage within the **Paymaster & Zero-XLM Gasless Infrastructure** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 34,
+    "title": "Create Soroban simulation tool for estimating exact envelope gas costs",
+    "category": "Paymaster & Zero-XLM Gasless Infrastructure",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "paymaster"
+    ],
+    "body": "### Overview\nCreate Soroban simulation tool for estimating exact envelope gas costs within the **Paymaster & Zero-XLM Gasless Infrastructure** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 35,
+    "title": "Implement dynamic fee bumping for congested Stellar ledger blocks",
+    "category": "Paymaster & Zero-XLM Gasless Infrastructure",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "paymaster"
+    ],
+    "body": "### Overview\nImplement dynamic fee bumping for congested Stellar ledger blocks within the **Paymaster & Zero-XLM Gasless Infrastructure** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 36,
+    "title": "Add multi-sig admin authorization for Paymaster parameter updates",
+    "category": "Paymaster & Zero-XLM Gasless Infrastructure",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "paymaster"
+    ],
+    "body": "### Overview\nAdd multi-sig admin authorization for Paymaster parameter updates within the **Paymaster & Zero-XLM Gasless Infrastructure** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 37,
+    "title": "Implement health-check endpoint for Paymaster operational reserves",
+    "category": "Paymaster & Zero-XLM Gasless Infrastructure",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "paymaster"
+    ],
+    "body": "### Overview\nImplement health-check endpoint for Paymaster operational reserves within the **Paymaster & Zero-XLM Gasless Infrastructure** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 38,
+    "title": "Create low-balance alert webhook service for Paymaster XLM pool",
+    "category": "Paymaster & Zero-XLM Gasless Infrastructure",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "paymaster"
+    ],
+    "body": "### Overview\nCreate low-balance alert webhook service for Paymaster XLM pool within the **Paymaster & Zero-XLM Gasless Infrastructure** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 39,
+    "title": "Add unit tests for Paymaster initialization re-entry prevention",
+    "category": "Paymaster & Zero-XLM Gasless Infrastructure",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "paymaster"
+    ],
+    "body": "### Overview\nAdd unit tests for Paymaster initialization re-entry prevention within the **Paymaster & Zero-XLM Gasless Infrastructure** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 40,
+    "title": "Implement fallback gas sponsor address in case primary pool exhausts",
+    "category": "Paymaster & Zero-XLM Gasless Infrastructure",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "paymaster"
+    ],
+    "body": "### Overview\nImplement fallback gas sponsor address in case primary pool exhausts within the **Paymaster & Zero-XLM Gasless Infrastructure** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 41,
+    "title": "Create benchmark report for Paymaster invocation CPU and memory cost",
+    "category": "Paymaster & Zero-XLM Gasless Infrastructure",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "paymaster"
+    ],
+    "body": "### Overview\nCreate benchmark report for Paymaster invocation CPU and memory cost within the **Paymaster & Zero-XLM Gasless Infrastructure** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 42,
+    "title": "Add support for sponsoring Soroban auth invocation trees",
+    "category": "Paymaster & Zero-XLM Gasless Infrastructure",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "paymaster"
+    ],
+    "body": "### Overview\nAdd support for sponsoring Soroban auth invocation trees within the **Paymaster & Zero-XLM Gasless Infrastructure** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 43,
+    "title": "Implement fee rebate mechanism for failed destination transactions",
+    "category": "Paymaster & Zero-XLM Gasless Infrastructure",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "paymaster"
+    ],
+    "body": "### Overview\nImplement fee rebate mechanism for failed destination transactions within the **Paymaster & Zero-XLM Gasless Infrastructure** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 44,
+    "title": "Create Paymaster dashboard metrics exporter for Prometheus",
+    "category": "Paymaster & Zero-XLM Gasless Infrastructure",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "paymaster"
+    ],
+    "body": "### Overview\nCreate Paymaster dashboard metrics exporter for Prometheus within the **Paymaster & Zero-XLM Gasless Infrastructure** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 45,
+    "title": "Implement automated top-up cron job from treasury reserves",
+    "category": "Paymaster & Zero-XLM Gasless Infrastructure",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "paymaster"
+    ],
+    "body": "### Overview\nImplement automated top-up cron job from treasury reserves within the **Paymaster & Zero-XLM Gasless Infrastructure** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 46,
+    "title": "Add unit tests for Paymaster multi-token fee recording",
+    "category": "Paymaster & Zero-XLM Gasless Infrastructure",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "paymaster"
+    ],
+    "body": "### Overview\nAdd unit tests for Paymaster multi-token fee recording within the **Paymaster & Zero-XLM Gasless Infrastructure** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 47,
+    "title": "Implement whitelist of authorized relayers for fee sponsorship",
+    "category": "Paymaster & Zero-XLM Gasless Infrastructure",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "paymaster"
+    ],
+    "body": "### Overview\nImplement whitelist of authorized relayers for fee sponsorship within the **Paymaster & Zero-XLM Gasless Infrastructure** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 48,
+    "title": "Add unit tests verifying zero-XLM user cannot drain paymaster buffer",
+    "category": "Paymaster & Zero-XLM Gasless Infrastructure",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "paymaster"
+    ],
+    "body": "### Overview\nAdd unit tests verifying zero-XLM user cannot drain paymaster buffer within the **Paymaster & Zero-XLM Gasless Infrastructure** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 49,
+    "title": "Implement country sanction whitelist/blacklist checks in MeridianCompliance",
+    "category": "Institutional Compliance & SEP-8 Gate",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "compliance"
+    ],
+    "body": "### Overview\nImplement country sanction whitelist/blacklist checks in MeridianCompliance within the **Institutional Compliance & SEP-8 Gate** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 50,
+    "title": "Add expiration timestamp check for KYC verification credentials",
+    "category": "Institutional Compliance & SEP-8 Gate",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "compliance"
+    ],
+    "body": "### Overview\nAdd expiration timestamp check for KYC verification credentials within the **Institutional Compliance & SEP-8 Gate** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 51,
+    "title": "Support batch KYC credential upload for institutional onboarding",
+    "category": "Institutional Compliance & SEP-8 Gate",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "compliance"
+    ],
+    "body": "### Overview\nSupport batch KYC credential upload for institutional onboarding within the **Institutional Compliance & SEP-8 Gate** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 52,
+    "title": "Implement accredited investor verification flag checks",
+    "category": "Institutional Compliance & SEP-8 Gate",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "compliance"
+    ],
+    "body": "### Overview\nImplement accredited investor verification flag checks within the **Institutional Compliance & SEP-8 Gate** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 53,
+    "title": "Add integration with on-chain identity attestations (e.g. Worldcoin / ONCHAINID)",
+    "category": "Institutional Compliance & SEP-8 Gate",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "compliance"
+    ],
+    "body": "### Overview\nAdd integration with on-chain identity attestations (e.g. Worldcoin / ONCHAINID) within the **Institutional Compliance & SEP-8 Gate** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 54,
+    "title": "Implement SEP-8 regulated asset approval server callback interface",
+    "category": "Institutional Compliance & SEP-8 Gate",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "compliance"
+    ],
+    "body": "### Overview\nImplement SEP-8 regulated asset approval server callback interface within the **Institutional Compliance & SEP-8 Gate** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 55,
+    "title": "Create admin revocation mechanism for compromised compliance credentials",
+    "category": "Institutional Compliance & SEP-8 Gate",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "compliance"
+    ],
+    "body": "### Overview\nCreate admin revocation mechanism for compromised compliance credentials within the **Institutional Compliance & SEP-8 Gate** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 56,
+    "title": "Add zero-knowledge proof (ZKP) verification hook for privacy-preserving KYC",
+    "category": "Institutional Compliance & SEP-8 Gate",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "compliance"
+    ],
+    "body": "### Overview\nAdd zero-knowledge proof (ZKP) verification hook for privacy-preserving KYC within the **Institutional Compliance & SEP-8 Gate** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 57,
+    "title": "Implement compliance audit trail event emission",
+    "category": "Institutional Compliance & SEP-8 Gate",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "compliance"
+    ],
+    "body": "### Overview\nImplement compliance audit trail event emission within the **Institutional Compliance & SEP-8 Gate** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 58,
+    "title": "Add unit tests for expired KYC credential rejection",
+    "category": "Institutional Compliance & SEP-8 Gate",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "compliance"
+    ],
+    "body": "### Overview\nAdd unit tests for expired KYC credential rejection within the **Institutional Compliance & SEP-8 Gate** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 59,
+    "title": "Implement role-based access control for compliance officers",
+    "category": "Institutional Compliance & SEP-8 Gate",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "compliance"
+    ],
+    "body": "### Overview\nImplement role-based access control for compliance officers within the **Institutional Compliance & SEP-8 Gate** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 60,
+    "title": "Create compliance REST API gateway for institutional identity providers",
+    "category": "Institutional Compliance & SEP-8 Gate",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "compliance"
+    ],
+    "body": "### Overview\nCreate compliance REST API gateway for institutional identity providers within the **Institutional Compliance & SEP-8 Gate** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 61,
+    "title": "Add verification status query helper in SDK",
+    "category": "Institutional Compliance & SEP-8 Gate",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "compliance"
+    ],
+    "body": "### Overview\nAdd verification status query helper in SDK within the **Institutional Compliance & SEP-8 Gate** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 62,
+    "title": "Implement jurisdiction-specific maximum holding limits on Soroban",
+    "category": "Institutional Compliance & SEP-8 Gate",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "compliance"
+    ],
+    "body": "### Overview\nImplement jurisdiction-specific maximum holding limits on Soroban within the **Institutional Compliance & SEP-8 Gate** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 63,
+    "title": "Add unit tests for country code ISO-3166 numeric validation",
+    "category": "Institutional Compliance & SEP-8 Gate",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "compliance"
+    ],
+    "body": "### Overview\nAdd unit tests for country code ISO-3166 numeric validation within the **Institutional Compliance & SEP-8 Gate** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 64,
+    "title": "Implement compliance fee discount for verified non-profit organizations",
+    "category": "Institutional Compliance & SEP-8 Gate",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "compliance"
+    ],
+    "body": "### Overview\nImplement compliance fee discount for verified non-profit organizations within the **Institutional Compliance & SEP-8 Gate** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 65,
+    "title": "Create mock KYC attestation issuer for testnet rehearsals",
+    "category": "Institutional Compliance & SEP-8 Gate",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "compliance"
+    ],
+    "body": "### Overview\nCreate mock KYC attestation issuer for testnet rehearsals within the **Institutional Compliance & SEP-8 Gate** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 66,
+    "title": "Add unit tests for compliance initialization access control",
+    "category": "Institutional Compliance & SEP-8 Gate",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "compliance"
+    ],
+    "body": "### Overview\nAdd unit tests for compliance initialization access control within the **Institutional Compliance & SEP-8 Gate** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 67,
+    "title": "Implement automated KYC expiration notifications via webhook",
+    "category": "Institutional Compliance & SEP-8 Gate",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "compliance"
+    ],
+    "body": "### Overview\nImplement automated KYC expiration notifications via webhook within the **Institutional Compliance & SEP-8 Gate** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 68,
+    "title": "Document compliance integration guide for institutional RWA issuers",
+    "category": "Institutional Compliance & SEP-8 Gate",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "compliance"
+    ],
+    "body": "### Overview\nDocument compliance integration guide for institutional RWA issuers within the **Institutional Compliance & SEP-8 Gate** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 69,
+    "title": "Implement Circle CCTP attestation polling with exponential backoff",
+    "category": "Bridges & Cross-Chain Oracles",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "bridges"
+    ],
+    "body": "### Overview\nImplement Circle CCTP attestation polling with exponential backoff within the **Bridges & Cross-Chain Oracles** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 70,
+    "title": "Add Allbridge Core fallback routing when CCTP route is congested",
+    "category": "Bridges & Cross-Chain Oracles",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "bridges"
+    ],
+    "body": "### Overview\nAdd Allbridge Core fallback routing when CCTP route is congested within the **Bridges & Cross-Chain Oracles** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 71,
+    "title": "Implement LayerZero endpoint integration for non-EVM messaging",
+    "category": "Bridges & Cross-Chain Oracles",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "bridges"
+    ],
+    "body": "### Overview\nImplement LayerZero endpoint integration for non-EVM messaging within the **Bridges & Cross-Chain Oracles** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 72,
+    "title": "Add CCTP message hash validation before submission",
+    "category": "Bridges & Cross-Chain Oracles",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "bridges"
+    ],
+    "body": "### Overview\nAdd CCTP message hash validation before submission within the **Bridges & Cross-Chain Oracles** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 73,
+    "title": "Create dead-letter queue for failed cross-chain attestations",
+    "category": "Bridges & Cross-Chain Oracles",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "bridges"
+    ],
+    "body": "### Overview\nCreate dead-letter queue for failed cross-chain attestations within the **Bridges & Cross-Chain Oracles** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 74,
+    "title": "Implement Chainlink / Reflector price feed verification on Soroban",
+    "category": "Bridges & Cross-Chain Oracles",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "bridges"
+    ],
+    "body": "### Overview\nImplement Chainlink / Reflector price feed verification on Soroban within the **Bridges & Cross-Chain Oracles** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 75,
+    "title": "Add support for Solana CCTP domain (Domain 5) in SDK and Relayer",
+    "category": "Bridges & Cross-Chain Oracles",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "bridges"
+    ],
+    "body": "### Overview\nAdd support for Solana CCTP domain (Domain 5) in SDK and Relayer within the **Bridges & Cross-Chain Oracles** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 76,
+    "title": "Implement Arbitrum CCTP fast-finality attestation listener",
+    "category": "Bridges & Cross-Chain Oracles",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "bridges"
+    ],
+    "body": "### Overview\nImplement Arbitrum CCTP fast-finality attestation listener within the **Bridges & Cross-Chain Oracles** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 77,
+    "title": "Create cross-chain transaction receipt generator",
+    "category": "Bridges & Cross-Chain Oracles",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "bridges"
+    ],
+    "body": "### Overview\nCreate cross-chain transaction receipt generator within the **Bridges & Cross-Chain Oracles** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 78,
+    "title": "Add unit tests for CCTP domain ID translation",
+    "category": "Bridges & Cross-Chain Oracles",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "bridges"
+    ],
+    "body": "### Overview\nAdd unit tests for CCTP domain ID translation within the **Bridges & Cross-Chain Oracles** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 79,
+    "title": "Implement automated retry mechanism for stalled CCTP minting",
+    "category": "Bridges & Cross-Chain Oracles",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "bridges"
+    ],
+    "body": "### Overview\nImplement automated retry mechanism for stalled CCTP minting within the **Bridges & Cross-Chain Oracles** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 80,
+    "title": "Add multi-bridge quote comparison engine in SDK",
+    "category": "Bridges & Cross-Chain Oracles",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "bridges"
+    ],
+    "body": "### Overview\nAdd multi-bridge quote comparison engine in SDK within the **Bridges & Cross-Chain Oracles** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 81,
+    "title": "Implement bridge fee estimation endpoint in relayer API",
+    "category": "Bridges & Cross-Chain Oracles",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "bridges"
+    ],
+    "body": "### Overview\nImplement bridge fee estimation endpoint in relayer API within the **Bridges & Cross-Chain Oracles** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 82,
+    "title": "Create bridge status monitoring dashboard with uptime indicators",
+    "category": "Bridges & Cross-Chain Oracles",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "bridges"
+    ],
+    "body": "### Overview\nCreate bridge status monitoring dashboard with uptime indicators within the **Bridges & Cross-Chain Oracles** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 83,
+    "title": "Add unit tests for Allbridge messenger payload deserialization",
+    "category": "Bridges & Cross-Chain Oracles",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "bridges"
+    ],
+    "body": "### Overview\nAdd unit tests for Allbridge messenger payload deserialization within the **Bridges & Cross-Chain Oracles** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 84,
+    "title": "Implement bridge latency tracker across supported origin chains",
+    "category": "Bridges & Cross-Chain Oracles",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "bridges"
+    ],
+    "body": "### Overview\nImplement bridge latency tracker across supported origin chains within the **Bridges & Cross-Chain Oracles** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 85,
+    "title": "Add cross-chain message replay test vectors",
+    "category": "Bridges & Cross-Chain Oracles",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "bridges"
+    ],
+    "body": "### Overview\nAdd cross-chain message replay test vectors within the **Bridges & Cross-Chain Oracles** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 86,
+    "title": "Implement automated alert for Circle Iris API rate-limiting",
+    "category": "Bridges & Cross-Chain Oracles",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "bridges"
+    ],
+    "body": "### Overview\nImplement automated alert for Circle Iris API rate-limiting within the **Bridges & Cross-Chain Oracles** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 87,
+    "title": "Create mock CCTP transmitter for local sandbox testing",
+    "category": "Bridges & Cross-Chain Oracles",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "bridges"
+    ],
+    "body": "### Overview\nCreate mock CCTP transmitter for local sandbox testing within the **Bridges & Cross-Chain Oracles** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 88,
+    "title": "Add support for Base (Domain 6) and Polygon (Domain 7) domains",
+    "category": "Bridges & Cross-Chain Oracles",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "bridges"
+    ],
+    "body": "### Overview\nAdd support for Base (Domain 6) and Polygon (Domain 7) domains within the **Bridges & Cross-Chain Oracles** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 89,
+    "title": "Implement gas price oracle integration for origin EVM chains",
+    "category": "Bridges & Cross-Chain Oracles",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "bridges"
+    ],
+    "body": "### Overview\nImplement gas price oracle integration for origin EVM chains within the **Bridges & Cross-Chain Oracles** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 90,
+    "title": "Document cross-chain bridge security assumptions and threat model",
+    "category": "Bridges & Cross-Chain Oracles",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "bridges"
+    ],
+    "body": "### Overview\nDocument cross-chain bridge security assumptions and threat model within the **Bridges & Cross-Chain Oracles** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 91,
+    "title": "Implement cross-chain route estimation caching layer",
+    "category": "TypeScript SDK (@meridian-protocol/sdk)",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "sdk"
+    ],
+    "body": "### Overview\nImplement cross-chain route estimation caching layer within the **TypeScript SDK (@meridian-protocol/sdk)** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 92,
+    "title": "Add support for EIP-712 typed data signing in SDK",
+    "category": "TypeScript SDK (@meridian-protocol/sdk)",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "sdk"
+    ],
+    "body": "### Overview\nAdd support for EIP-712 typed data signing in SDK within the **TypeScript SDK (@meridian-protocol/sdk)** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 93,
+    "title": "Create transaction builder for Soroban execute_intent invocation",
+    "category": "TypeScript SDK (@meridian-protocol/sdk)",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "sdk"
+    ],
+    "body": "### Overview\nCreate transaction builder for Soroban execute_intent invocation within the **TypeScript SDK (@meridian-protocol/sdk)** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 94,
+    "title": "Implement automated slippage calculation based on pool depth",
+    "category": "TypeScript SDK (@meridian-protocol/sdk)",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "sdk"
+    ],
+    "body": "### Overview\nImplement automated slippage calculation based on pool depth within the **TypeScript SDK (@meridian-protocol/sdk)** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 95,
+    "title": "Add helper to query Stellar account trustlines and balances",
+    "category": "TypeScript SDK (@meridian-protocol/sdk)",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "sdk"
+    ],
+    "body": "### Overview\nAdd helper to query Stellar account trustlines and balances within the **TypeScript SDK (@meridian-protocol/sdk)** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 96,
+    "title": "Implement WebSocket subscription for intent execution progress",
+    "category": "TypeScript SDK (@meridian-protocol/sdk)",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "sdk"
+    ],
+    "body": "### Overview\nImplement WebSocket subscription for intent execution progress within the **TypeScript SDK (@meridian-protocol/sdk)** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 97,
+    "title": "Create TypeScript types for all Soroban contract events",
+    "category": "TypeScript SDK (@meridian-protocol/sdk)",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "sdk"
+    ],
+    "body": "### Overview\nCreate TypeScript types for all Soroban contract events within the **TypeScript SDK (@meridian-protocol/sdk)** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 98,
+    "title": "Add unit test suite with 90%+ code coverage for SDK",
+    "category": "TypeScript SDK (@meridian-protocol/sdk)",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "sdk"
+    ],
+    "body": "### Overview\nAdd unit test suite with 90%+ code coverage for SDK within the **TypeScript SDK (@meridian-protocol/sdk)** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 99,
+    "title": "Implement SDK error classes with human-readable error messages",
+    "category": "TypeScript SDK (@meridian-protocol/sdk)",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "sdk"
+    ],
+    "body": "### Overview\nImplement SDK error classes with human-readable error messages within the **TypeScript SDK (@meridian-protocol/sdk)** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 100,
+    "title": "Add support for multiple Stellar RPC endpoints with automatic failover",
+    "category": "TypeScript SDK (@meridian-protocol/sdk)",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "sdk"
+    ],
+    "body": "### Overview\nAdd support for multiple Stellar RPC endpoints with automatic failover within the **TypeScript SDK (@meridian-protocol/sdk)** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 101,
+    "title": "Implement batch quoting method getQuotesForMultipleChains",
+    "category": "TypeScript SDK (@meridian-protocol/sdk)",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "sdk"
+    ],
+    "body": "### Overview\nImplement batch quoting method getQuotesForMultipleChains within the **TypeScript SDK (@meridian-protocol/sdk)** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 102,
+    "title": "Create mock provider for offline SDK development",
+    "category": "TypeScript SDK (@meridian-protocol/sdk)",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "sdk"
+    ],
+    "body": "### Overview\nCreate mock provider for offline SDK development within the **TypeScript SDK (@meridian-protocol/sdk)** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 103,
+    "title": "Add gas estimation helper for origin chain transactions",
+    "category": "TypeScript SDK (@meridian-protocol/sdk)",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "sdk"
+    ],
+    "body": "### Overview\nAdd gas estimation helper for origin chain transactions within the **TypeScript SDK (@meridian-protocol/sdk)** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 104,
+    "title": "Implement automated NPM package build and release pipeline",
+    "category": "TypeScript SDK (@meridian-protocol/sdk)",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "sdk"
+    ],
+    "body": "### Overview\nImplement automated NPM package build and release pipeline within the **TypeScript SDK (@meridian-protocol/sdk)** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 105,
+    "title": "Add browser and Node.js dual bundle configuration",
+    "category": "TypeScript SDK (@meridian-protocol/sdk)",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "sdk"
+    ],
+    "body": "### Overview\nAdd browser and Node.js dual bundle configuration within the **TypeScript SDK (@meridian-protocol/sdk)** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 106,
+    "title": "Implement SDK logging middleware with configurable log levels",
+    "category": "TypeScript SDK (@meridian-protocol/sdk)",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "sdk"
+    ],
+    "body": "### Overview\nImplement SDK logging middleware with configurable log levels within the **TypeScript SDK (@meridian-protocol/sdk)** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 107,
+    "title": "Create code example for 1-click vault deposit in TypeScript",
+    "category": "TypeScript SDK (@meridian-protocol/sdk)",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "sdk"
+    ],
+    "body": "### Overview\nCreate code example for 1-click vault deposit in TypeScript within the **TypeScript SDK (@meridian-protocol/sdk)** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 108,
+    "title": "Add support for Ledger and Trezor hardware wallets in SDK",
+    "category": "TypeScript SDK (@meridian-protocol/sdk)",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "sdk"
+    ],
+    "body": "### Overview\nAdd support for Ledger and Trezor hardware wallets in SDK within the **TypeScript SDK (@meridian-protocol/sdk)** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 109,
+    "title": "Implement client-side transaction simulation before broadcast",
+    "category": "TypeScript SDK (@meridian-protocol/sdk)",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "sdk"
+    ],
+    "body": "### Overview\nImplement client-side transaction simulation before broadcast within the **TypeScript SDK (@meridian-protocol/sdk)** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 110,
+    "title": "Add automated retry on transient Stellar RPC HTTP 504 errors",
+    "category": "TypeScript SDK (@meridian-protocol/sdk)",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "sdk"
+    ],
+    "body": "### Overview\nAdd automated retry on transient Stellar RPC HTTP 504 errors within the **TypeScript SDK (@meridian-protocol/sdk)** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 111,
+    "title": "Create helper to resolve Stellar federated addresses (name*domain.com)",
+    "category": "TypeScript SDK (@meridian-protocol/sdk)",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "sdk"
+    ],
+    "body": "### Overview\nCreate helper to resolve Stellar federated addresses (name*domain.com) within the **TypeScript SDK (@meridian-protocol/sdk)** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 112,
+    "title": "Add typed event listener for CrossChainSwapCompleted",
+    "category": "TypeScript SDK (@meridian-protocol/sdk)",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "sdk"
+    ],
+    "body": "### Overview\nAdd typed event listener for CrossChainSwapCompleted within the **TypeScript SDK (@meridian-protocol/sdk)** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 113,
+    "title": "Implement SDK documentation site using TypeDoc",
+    "category": "TypeScript SDK (@meridian-protocol/sdk)",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "sdk"
+    ],
+    "body": "### Overview\nImplement SDK documentation site using TypeDoc within the **TypeScript SDK (@meridian-protocol/sdk)** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 114,
+    "title": "Add unit tests for CCTP message packing and unpacking",
+    "category": "TypeScript SDK (@meridian-protocol/sdk)",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "sdk"
+    ],
+    "body": "### Overview\nAdd unit tests for CCTP message packing and unpacking within the **TypeScript SDK (@meridian-protocol/sdk)** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 115,
+    "title": "Create CLI tool (meridian-cli) powered by the SDK",
+    "category": "TypeScript SDK (@meridian-protocol/sdk)",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "sdk"
+    ],
+    "body": "### Overview\nCreate CLI tool (meridian-cli) powered by the SDK within the **TypeScript SDK (@meridian-protocol/sdk)** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 116,
+    "title": "Implement Freighter wallet connection state persistence",
+    "category": "Frontend UI/UX & Web3 Integrations",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "frontend"
+    ],
+    "body": "### Overview\nImplement Freighter wallet connection state persistence within the **Frontend UI/UX & Web3 Integrations** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 117,
+    "title": "Add MetaMask and Rainbow EVM wallet connection via Wagmi/Viem",
+    "category": "Frontend UI/UX & Web3 Integrations",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "frontend"
+    ],
+    "body": "### Overview\nAdd MetaMask and Rainbow EVM wallet connection via Wagmi/Viem within the **Frontend UI/UX & Web3 Integrations** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 118,
+    "title": "Create real-time cross-chain progress stepper modal",
+    "category": "Frontend UI/UX & Web3 Integrations",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "frontend"
+    ],
+    "body": "### Overview\nCreate real-time cross-chain progress stepper modal within the **Frontend UI/UX & Web3 Integrations** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 119,
+    "title": "Implement slippage tolerance customization settings modal",
+    "category": "Frontend UI/UX & Web3 Integrations",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "frontend"
+    ],
+    "body": "### Overview\nImplement slippage tolerance customization settings modal within the **Frontend UI/UX & Web3 Integrations** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 120,
+    "title": "Add dark/light mode toggle with Tailwind theme extension",
+    "category": "Frontend UI/UX & Web3 Integrations",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "frontend"
+    ],
+    "body": "### Overview\nAdd dark/light mode toggle with Tailwind theme extension within the **Frontend UI/UX & Web3 Integrations** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 121,
+    "title": "Create responsive mobile navigation drawer",
+    "category": "Frontend UI/UX & Web3 Integrations",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "frontend"
+    ],
+    "body": "### Overview\nCreate responsive mobile navigation drawer within the **Frontend UI/UX & Web3 Integrations** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 122,
+    "title": "Implement transaction history drawer with local storage caching",
+    "category": "Frontend UI/UX & Web3 Integrations",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "frontend"
+    ],
+    "body": "### Overview\nImplement transaction history drawer with local storage caching within the **Frontend UI/UX & Web3 Integrations** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 123,
+    "title": "Add token search and selection modal with search indexing",
+    "category": "Frontend UI/UX & Web3 Integrations",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "frontend"
+    ],
+    "body": "### Overview\nAdd token search and selection modal with search indexing within the **Frontend UI/UX & Web3 Integrations** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 124,
+    "title": "Implement price impact warning for high-slippage trades",
+    "category": "Frontend UI/UX & Web3 Integrations",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "frontend"
+    ],
+    "body": "### Overview\nImplement price impact warning for high-slippage trades within the **Frontend UI/UX & Web3 Integrations** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 125,
+    "title": "Create interactive RWA vault detail page with historical APY charts",
+    "category": "Frontend UI/UX & Web3 Integrations",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "frontend"
+    ],
+    "body": "### Overview\nCreate interactive RWA vault detail page with historical APY charts within the **Frontend UI/UX & Web3 Integrations** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 126,
+    "title": "Add copy-to-clipboard button for transaction hashes and addresses",
+    "category": "Frontend UI/UX & Web3 Integrations",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "frontend"
+    ],
+    "body": "### Overview\nAdd copy-to-clipboard button for transaction hashes and addresses within the **Frontend UI/UX & Web3 Integrations** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 127,
+    "title": "Implement toast notification system for transaction lifecycle",
+    "category": "Frontend UI/UX & Web3 Integrations",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "frontend"
+    ],
+    "body": "### Overview\nImplement toast notification system for transaction lifecycle within the **Frontend UI/UX & Web3 Integrations** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 128,
+    "title": "Create animated loading skeletons for vault cards",
+    "category": "Frontend UI/UX & Web3 Integrations",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "frontend"
+    ],
+    "body": "### Overview\nCreate animated loading skeletons for vault cards within the **Frontend UI/UX & Web3 Integrations** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 129,
+    "title": "Add network switch prompt if user is on unsupported EVM chain",
+    "category": "Frontend UI/UX & Web3 Integrations",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "frontend"
+    ],
+    "body": "### Overview\nAdd network switch prompt if user is on unsupported EVM chain within the **Frontend UI/UX & Web3 Integrations** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 130,
+    "title": "Implement QR code scanner for recipient Stellar address input",
+    "category": "Frontend UI/UX & Web3 Integrations",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "frontend"
+    ],
+    "body": "### Overview\nImplement QR code scanner for recipient Stellar address input within the **Frontend UI/UX & Web3 Integrations** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 131,
+    "title": "Create embeddable iframe widget of the swap interface",
+    "category": "Frontend UI/UX & Web3 Integrations",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "frontend"
+    ],
+    "body": "### Overview\nCreate embeddable iframe widget of the swap interface within the **Frontend UI/UX & Web3 Integrations** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 132,
+    "title": "Add localization support (i18n) for Spanish, Portuguese, and French",
+    "category": "Frontend UI/UX & Web3 Integrations",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "frontend"
+    ],
+    "body": "### Overview\nAdd localization support (i18n) for Spanish, Portuguese, and French within the **Frontend UI/UX & Web3 Integrations** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 133,
+    "title": "Implement accessibility (a11y) improvements across all interactive elements",
+    "category": "Frontend UI/UX & Web3 Integrations",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "frontend"
+    ],
+    "body": "### Overview\nImplement accessibility (a11y) improvements across all interactive elements within the **Frontend UI/UX & Web3 Integrations** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 134,
+    "title": "Create 404 and Error Boundary fallback pages",
+    "category": "Frontend UI/UX & Web3 Integrations",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "frontend"
+    ],
+    "body": "### Overview\nCreate 404 and Error Boundary fallback pages within the **Frontend UI/UX & Web3 Integrations** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 135,
+    "title": "Add performance optimization for Webpack/Next.js bundle splitting",
+    "category": "Frontend UI/UX & Web3 Integrations",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "frontend"
+    ],
+    "body": "### Overview\nAdd performance optimization for Webpack/Next.js bundle splitting within the **Frontend UI/UX & Web3 Integrations** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 136,
+    "title": "Implement user feedback banner for testnet faucet availability",
+    "category": "Frontend UI/UX & Web3 Integrations",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "frontend"
+    ],
+    "body": "### Overview\nImplement user feedback banner for testnet faucet availability within the **Frontend UI/UX & Web3 Integrations** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 137,
+    "title": "Create analytics tracker for conversion funnels (privacy-first)",
+    "category": "Frontend UI/UX & Web3 Integrations",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "frontend"
+    ],
+    "body": "### Overview\nCreate analytics tracker for conversion funnels (privacy-first) within the **Frontend UI/UX & Web3 Integrations** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 138,
+    "title": "Add visual tooltip explaining Zero-XLM gasless paymaster mechanism",
+    "category": "Frontend UI/UX & Web3 Integrations",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "frontend"
+    ],
+    "body": "### Overview\nAdd visual tooltip explaining Zero-XLM gasless paymaster mechanism within the **Frontend UI/UX & Web3 Integrations** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 139,
+    "title": "Implement SEP-24 interactive deposit and withdrawal flow in frontend",
+    "category": "Fiat Off-Ramps & Stellar SEP Standards",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "sep-fiat"
+    ],
+    "body": "### Overview\nImplement SEP-24 interactive deposit and withdrawal flow in frontend within the **Fiat Off-Ramps & Stellar SEP Standards** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 140,
+    "title": "Add SEP-6 programmatic fiat quote and fee querying",
+    "category": "Fiat Off-Ramps & Stellar SEP Standards",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "sep-fiat"
+    ],
+    "body": "### Overview\nAdd SEP-6 programmatic fiat quote and fee querying within the **Fiat Off-Ramps & Stellar SEP Standards** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 141,
+    "title": "Implement SEP-38 quote integration for local currency conversions",
+    "category": "Fiat Off-Ramps & Stellar SEP Standards",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "sep-fiat"
+    ],
+    "body": "### Overview\nImplement SEP-38 quote integration for local currency conversions within the **Fiat Off-Ramps & Stellar SEP Standards** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 142,
+    "title": "Add SEP-10 stellar web authentication JWT handler",
+    "category": "Fiat Off-Ramps & Stellar SEP Standards",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "sep-fiat"
+    ],
+    "body": "### Overview\nAdd SEP-10 stellar web authentication JWT handler within the **Fiat Off-Ramps & Stellar SEP Standards** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 143,
+    "title": "Create off-ramp status polling service for local bank transfers",
+    "category": "Fiat Off-Ramps & Stellar SEP Standards",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "sep-fiat"
+    ],
+    "body": "### Overview\nCreate off-ramp status polling service for local bank transfers within the **Fiat Off-Ramps & Stellar SEP Standards** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 144,
+    "title": "Implement fallback escrow refund logic if fiat anchor fails disbursement",
+    "category": "Fiat Off-Ramps & Stellar SEP Standards",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "sep-fiat"
+    ],
+    "body": "### Overview\nImplement fallback escrow refund logic if fiat anchor fails disbursement within the **Fiat Off-Ramps & Stellar SEP Standards** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 145,
+    "title": "Add support for Brazilian Pix off-ramps via Mercado Bitcoin anchor",
+    "category": "Fiat Off-Ramps & Stellar SEP Standards",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "sep-fiat"
+    ],
+    "body": "### Overview\nAdd support for Brazilian Pix off-ramps via Mercado Bitcoin anchor within the **Fiat Off-Ramps & Stellar SEP Standards** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 146,
+    "title": "Implement Nigerian Naira off-ramp flow via Cowrie / Yellow Card anchor",
+    "category": "Fiat Off-Ramps & Stellar SEP Standards",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "sep-fiat"
+    ],
+    "body": "### Overview\nImplement Nigerian Naira off-ramp flow via Cowrie / Yellow Card anchor within the **Fiat Off-Ramps & Stellar SEP Standards** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 147,
+    "title": "Add Colombian Peso (COP) anchor integration",
+    "category": "Fiat Off-Ramps & Stellar SEP Standards",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "sep-fiat"
+    ],
+    "body": "### Overview\nAdd Colombian Peso (COP) anchor integration within the **Fiat Off-Ramps & Stellar SEP Standards** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 148,
+    "title": "Create comprehensive SEP integration testing guide",
+    "category": "Fiat Off-Ramps & Stellar SEP Standards",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "sep-fiat"
+    ],
+    "body": "### Overview\nCreate comprehensive SEP integration testing guide within the **Fiat Off-Ramps & Stellar SEP Standards** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 149,
+    "title": "Set up GitHub Actions workflow for automated WASM contract optimization",
+    "category": "DevOps, Security, Testing & Documentation",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "devops-security"
+    ],
+    "body": "### Overview\nSet up GitHub Actions workflow for automated WASM contract optimization within the **DevOps, Security, Testing & Documentation** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 150,
+    "title": "Implement automated code formatting check with cargo fmt and prettier",
+    "category": "DevOps, Security, Testing & Documentation",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "devops-security"
+    ],
+    "body": "### Overview\nImplement automated code formatting check with cargo fmt and prettier within the **DevOps, Security, Testing & Documentation** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 151,
+    "title": "Create end-to-end integration test runner on Stellar Testnet",
+    "category": "DevOps, Security, Testing & Documentation",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "devops-security"
+    ],
+    "body": "### Overview\nCreate end-to-end integration test runner on Stellar Testnet within the **DevOps, Security, Testing & Documentation** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 152,
+    "title": "Implement fuzz testing suite for Soroban contract entrypoints using cargo fuzz",
+    "category": "DevOps, Security, Testing & Documentation",
+    "complexity": "high",
+    "points": 200,
+    "labels": [
+      "Stellar Wave",
+      "complexity:high",
+      "devops-security"
+    ],
+    "body": "### Overview\nImplement fuzz testing suite for Soroban contract entrypoints using cargo fuzz within the **DevOps, Security, Testing & Documentation** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 153,
+    "title": "Add security vulnerability reporting policy (SECURITY.md)",
+    "category": "DevOps, Security, Testing & Documentation",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "devops-security"
+    ],
+    "body": "### Overview\nAdd security vulnerability reporting policy (SECURITY.md) within the **DevOps, Security, Testing & Documentation** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 154,
+    "title": "Create Docker compose file for running local Stellar Quickstart & Relayer",
+    "category": "DevOps, Security, Testing & Documentation",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "devops-security"
+    ],
+    "body": "### Overview\nCreate Docker compose file for running local Stellar Quickstart & Relayer within the **DevOps, Security, Testing & Documentation** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 155,
+    "title": "Write comprehensive developer tutorial: \"Bridging from Base to Blend Vault\"",
+    "category": "DevOps, Security, Testing & Documentation",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "devops-security"
+    ],
+    "body": "### Overview\nWrite comprehensive developer tutorial: \"Bridging from Base to Blend Vault\" within the **DevOps, Security, Testing & Documentation** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 156,
+    "title": "Implement automated changelog generator using conventional commits",
+    "category": "DevOps, Security, Testing & Documentation",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "devops-security"
+    ],
+    "body": "### Overview\nImplement automated changelog generator using conventional commits within the **DevOps, Security, Testing & Documentation** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 157,
+    "title": "Create Postman/Insomnia collection for Relayer and RPC APIs",
+    "category": "DevOps, Security, Testing & Documentation",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "devops-security"
+    ],
+    "body": "### Overview\nCreate Postman/Insomnia collection for Relayer and RPC APIs within the **DevOps, Security, Testing & Documentation** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 158,
+    "title": "Write security self-assessment and audit readiness report",
+    "category": "DevOps, Security, Testing & Documentation",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "devops-security"
+    ],
+    "body": "### Overview\nWrite security self-assessment and audit readiness report within the **DevOps, Security, Testing & Documentation** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 159,
+    "title": "Create video demo script and pitch deck for Stellar Community Fund",
+    "category": "DevOps, Security, Testing & Documentation",
+    "complexity": "trivial",
+    "points": 100,
+    "labels": [
+      "Stellar Wave",
+      "complexity:trivial",
+      "devops-security"
+    ],
+    "body": "### Overview\nCreate video demo script and pitch deck for Stellar Community Fund within the **DevOps, Security, Testing & Documentation** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  },
+  {
+    "id": 160,
+    "title": "Set up automated Slack/Discord notification bot for Drips Wave PR merges",
+    "category": "DevOps, Security, Testing & Documentation",
+    "complexity": "medium",
+    "points": 150,
+    "labels": [
+      "Stellar Wave",
+      "complexity:medium",
+      "devops-security"
+    ],
+    "body": "### Overview\nSet up automated Slack/Discord notification bot for Drips Wave PR merges within the **DevOps, Security, Testing & Documentation** module of Meridian Protocol.\n\n### Objectives & Deliverables\n- [ ] Implement the designated functionality in according to protocol specifications\n- [ ] Include unit / integration tests verifying core and boundary behaviors\n- [ ] Update corresponding documentation and developer guides\n- [ ] Pass all CI test gates without warnings\n\n### Verification\nAll code changes must pass the automated GitHub Actions CI suite (`contracts.yml` and `sdk-and-web.yml`)."
+  }
+]

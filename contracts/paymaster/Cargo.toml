@@ -1,0 +1,15 @@
+[package]
+name = "meridian-paymaster"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Gas Sponsorship & Zero-XLM Paymaster Contract for Meridian Protocol"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+soroban-sdk = { workspace = true }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }

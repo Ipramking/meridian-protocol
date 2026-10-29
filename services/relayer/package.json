@@ -1,0 +1,22 @@
+{
+  "name": "@meridian-protocol/relayer",
+  "version": "0.1.0",
+  "description": "Background Attestation Watcher & Soroban Transaction Relayer for Meridian Protocol",
+  "main": "./dist/index.js",
+  "scripts": {
+    "start": "tsc && node dist/index.js",
+    "build": "tsc"
+  },
+  "author": "Ipramking <inioluwasamuel.13pram@gmail.com>",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@meridian-protocol/sdk": "*",
+    "@stellar/stellar-sdk": "^12.3.0",
+    "dotenv": "^16.4.5",
+    "ethers": "^6.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0"
+  }
+}

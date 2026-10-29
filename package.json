@@ -1,0 +1,29 @@
+{
+  "name": "meridian-protocol",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cross-Chain Capital Gateway & Intent Router for Stellar Soroban RWAs, Yield, and Fiat Anchors",
+  "workspaces": [
+    "packages/*",
+    "services/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "test": "cargo test && npm run test --workspaces",
+    "contracts:build": "cargo build --target wasm32-unknown-unknown --release",
+    "contracts:test": "cargo test",
+    "seed:issues": "node issues/seed-issues.js"
+  },
+  "keywords": [
+    "stellar",
+    "soroban",
+    "rwa",
+    "cross-chain",
+    "cctp",
+    "dex",
+    "intent-routing"
+  ],
+  "author": "Ipramking <inioluwasamuel.13pram@gmail.com>",
+  "license": "Apache-2.0"
+}
