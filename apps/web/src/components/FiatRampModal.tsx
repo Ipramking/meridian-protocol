@@ -1,5 +1,5 @@
 import React from 'react';
-import { Building2, Globe, Shield, Wallet2 } from 'lucide-react';
+import { Building2, Globe, Shield } from 'lucide-react';
 
 export function FiatRampSection() {
   return (

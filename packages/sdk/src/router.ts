@@ -1,5 +1,5 @@
 import { CrossChainQuoteRequest, CrossChainQuoteResponse, MeridianIntentParams } from './types.js';
-import { CCTP_DOMAINS, STELLAR_CCTP_MAINNET } from './cctp.js';
+import { CCTP_DOMAINS } from './cctp.js';
 
 export const SOROSWAP_ROUTER_MAINNET = 'CAG5LRYQ5JVEUI5TEID72EYOVX44TTUJT5BQR2J6J77FH65PCCFAJDDH';
 export const MERIDIAN_ROUTER_CONTRACT = 'CDMERIDIAN7Z5Z77UP7GYPYGFOWFGW7C7J6I4YP2AFGSADRKQY62SYUFLPN';

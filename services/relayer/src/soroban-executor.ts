@@ -1,4 +1,4 @@
-import { Keypair, Horizon, rpc } from '@stellar/stellar-sdk';
+import { Keypair, rpc } from '@stellar/stellar-sdk';
 import { MERIDIAN_ROUTER_CONTRACT } from '@meridian-protocol/sdk';
 
 export class SorobanExecutor {

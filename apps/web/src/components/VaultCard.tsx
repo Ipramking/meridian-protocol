@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowUpRight, ShieldCheck, TrendingUp } from 'lucide-react';
+import { ArrowUpRight, TrendingUp } from 'lucide-react';
 import { SUPPORTED_STELLAR_VAULTS, SupportedRwaVault } from '@meridian-protocol/sdk';
 
 export function VaultCard({ vault }: { vault: SupportedRwaVault }) {
