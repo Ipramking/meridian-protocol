@@ -14,7 +14,6 @@ export class MeridianSDK {
       throw new Error(`Unsupported source chain: ${request.sourceChain}`);
     }
 
-    // Mock pricing curve for estimation (in production queries Soroswap Aggregator RPC)
     const amountInNum = parseFloat(request.amountIn);
     const relayerFee = (amountInNum * 0.0015).toFixed(4); // 0.15% fee
     const netInput = amountInNum - parseFloat(relayerFee);

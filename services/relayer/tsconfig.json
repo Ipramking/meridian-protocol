@@ -6,10 +6,7 @@
     "outDir": "./dist",
     "strict": true,
     "esModuleInterop": true,
-    "skipLibCheck": true,
-    "paths": {
-      "@meridian-protocol/sdk": ["../../packages/sdk/src/index.ts"]
-    }
+    "skipLibCheck": true
   },
   "include": ["src/**/*"]
 }
