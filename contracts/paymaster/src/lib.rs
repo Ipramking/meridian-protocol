@@ -19,6 +19,7 @@ pub enum PaymasterError {
     Unauthorized = 3,
     Inactive = 4,
     InsufficientBalance = 5,
+    InvalidAmount = 6,
 }
 
 #[contract]
@@ -56,14 +57,61 @@ impl MeridianPaymaster {
         Ok(())
     }
 
+    /// Return current Paymaster configuration
+    pub fn get_config(env: Env) -> Result<PaymasterConfig, PaymasterError> {
+        env.storage()
+            .instance()
+            .get(&DataKey::Config)
+            .ok_or(PaymasterError::NotInitialized)
+    }
+
+    /// Return total accumulated USDC fees awaiting rebalance
+    pub fn get_accumulated_fees(env: Env) -> Result<i128, PaymasterError> {
+        if !env.storage().instance().has(&DataKey::Config) {
+            return Err(PaymasterError::NotInitialized);
+        }
+        Ok(env
+            .storage()
+            .instance()
+            .get(&DataKey::AccumulatedFees)
+            .unwrap_or(0))
+    }
+
+    /// Return cumulative sponsored USDC fee volume for a specific user
+    pub fn get_sponsored_volume(env: Env, user: Address) -> i128 {
+        env.storage()
+            .persistent()
+            .get(&DataKey::SponsoredVolume(user))
+            .unwrap_or(0)
+    }
+
+    /// Enable or disable sponsorship operations (admin only)
+    pub fn set_active(env: Env, active: bool) -> Result<(), PaymasterError> {
+        let mut config: PaymasterConfig = env
+            .storage()
+            .instance()
+            .get(&DataKey::Config)
+            .ok_or(PaymasterError::NotInitialized)?;
+
+        config.admin.require_auth();
+        config.active = active;
+        env.storage().instance().set(&DataKey::Config, &config);
+
+        Ok(())
+    }
+
     /// Reimburse gas cost from user's USDC balance and sponsor native fee
     pub fn record_sponsorship(
         env: Env,
         caller: Address,
         user: Address,
         usdc_fee_amount: i128,
-    ) -> Result<(), PaymasterError> {
+    ) -> Result<i128, PaymasterError> {
         caller.require_auth();
+
+        if usdc_fee_amount <= 0 {
+            return Err(PaymasterError::InvalidAmount);
+        }
 
         let config: PaymasterConfig = env
             .storage()
@@ -75,20 +123,42 @@ impl MeridianPaymaster {
             return Err(PaymasterError::Inactive);
         }
 
-        // Pull USDC fee from user or router
+        // Apply markup in basis points
+        let markup = (usdc_fee_amount * (config.fee_markup_bps as i128)) / 10_000;
+        let total_charge = usdc_fee_amount + markup;
+
+        // Pull USDC fee from user
+        user.require_auth();
         let usdc_client = token::Client::new(&env, &config.usdc_token);
-        usdc_client.transfer(&user, &env.current_contract_address(), &usdc_fee_amount);
+        usdc_client.transfer(&user, &env.current_contract_address(), &total_charge);
 
         // Update accumulated fees
-        let current_fees: i128 = env.storage().instance().get(&DataKey::AccumulatedFees).unwrap_or(0);
-        env.storage().instance().set(&DataKey::AccumulatedFees, &(current_fees + usdc_fee_amount));
+        let current_fees: i128 = env
+            .storage()
+            .instance()
+            .get(&DataKey::AccumulatedFees)
+            .unwrap_or(0);
+        let updated_fees = current_fees + total_charge;
+        env.storage()
+            .instance()
+            .set(&DataKey::AccumulatedFees, &updated_fees);
+
+        // Track user's cumulative sponsored volume
+        let user_vol: i128 = env
+            .storage()
+            .persistent()
+            .get(&DataKey::SponsoredVolume(user.clone()))
+            .unwrap_or(0);
+        env.storage()
+            .persistent()
+            .set(&DataKey::SponsoredVolume(user.clone()), &(user_vol + total_charge));
 
         env.events().publish(
             (symbol_short!("sponsor"), user),
-            (usdc_fee_amount,),
+            (total_charge, updated_fees),
         );
 
-        Ok(())
+        Ok(total_charge)
     }
 
     /// Auto-rebalance: Swaps accumulated USDC fees back into native XLM via Soroswap
@@ -98,6 +168,10 @@ impl MeridianPaymaster {
         min_xlm_out: i128,
         deadline: u64,
     ) -> Result<i128, PaymasterError> {
+        if amount_to_swap <= 0 {
+            return Err(PaymasterError::InvalidAmount);
+        }
+
         let config: PaymasterConfig = env
             .storage()
             .instance()
@@ -106,7 +180,11 @@ impl MeridianPaymaster {
 
         config.admin.require_auth();
 
-        let accumulated: i128 = env.storage().instance().get(&DataKey::AccumulatedFees).unwrap_or(0);
+        let accumulated: i128 = env
+            .storage()
+            .instance()
+            .get(&DataKey::AccumulatedFees)
+            .unwrap_or(0);
         if accumulated < amount_to_swap {
             return Err(PaymasterError::InsufficientBalance);
         }
@@ -131,7 +209,8 @@ impl MeridianPaymaster {
             path,
             env.current_contract_address(),
             deadline,
-        ).into_val(&env);
+        )
+            .into_val(&env);
 
         let swap_result: Vec<i128> = env.invoke_contract(
             &config.soroswap_router,
@@ -140,7 +219,9 @@ impl MeridianPaymaster {
         );
 
         let xlm_received = swap_result.get(swap_result.len() - 1).unwrap();
-        env.storage().instance().set(&DataKey::AccumulatedFees, &(accumulated - amount_to_swap));
+        env.storage()
+            .instance()
+            .set(&DataKey::AccumulatedFees, &(accumulated - amount_to_swap));
 
         env.events().publish(
             (symbol_short!("rebal"),),

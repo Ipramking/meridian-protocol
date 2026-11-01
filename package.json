@@ -25,5 +25,8 @@
     "intent-routing"
   ],
   "author": "Ipramking <inioluwasamuel.13pram@gmail.com>",
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@stellar/stellar-sdk": "^17.4.0"
+  }
 }

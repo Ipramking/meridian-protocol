@@ -5,25 +5,38 @@ Meridian Protocol is designed to bridge external blockchain liquidity directly i
 
 ---
 
-## 2. Smart Contract Primitives
+## 2. Deployed Smart Contract Primitives (Stellar Soroban Testnet)
+
+All protocol contracts are deployed, initialized, and verifiable on Stellar Soroban Testnet (`Test SDF Network ; September 2015`):
+
+| Contract | Contract ID | Initialization Tx |
+|---|---|---|
+| `MeridianRouter` | [`CATRAXQGN7H73LDWWLUW3IBDNZG2XYQEUIVROC2UDOQ6XRPYEKK2WUED`](https://stellar.expert/explorer/testnet/contract/CATRAXQGN7H73LDWWLUW3IBDNZG2XYQEUIVROC2UDOQ6XRPYEKK2WUED) | [`ceff2fcb...77b98`](https://stellar.expert/explorer/testnet/tx/ceff2fcbb1c61eac260f1bcf7883255d06fd658f7e7ef31d965b2700f2277b98) |
+| `MeridianPaymaster` | [`CCZIOZNGCPEB5KQSQW4DECO3AFTNXLTAOECAR3ZBS3QVIG4KSMUS2S6I`](https://stellar.expert/explorer/testnet/contract/CCZIOZNGCPEB5KQSQW4DECO3AFTNXLTAOECAR3ZBS3QVIG4KSMUS2S6I) | [`1b906928...f5424`](https://stellar.expert/explorer/testnet/tx/1b906928f8423400fa6f954c5edafbe022f2530074bda462a1b3122a83ef5424) |
+| `MeridianCompliance` | [`CB65GHAERYSDNPGZYMEPESEKGC3PKL6UNOPYAZV6QUFW37OL7J24YU2S`](https://stellar.expert/explorer/testnet/contract/CB65GHAERYSDNPGZYMEPESEKGC3PKL6UNOPYAZV6QUFW37OL7J24YU2S) | [`9e0729de...ff031`](https://stellar.expert/explorer/testnet/tx/9e0729de3da687076c282acbdb04fe762e2cbb81f6d8fef27fb7ea8acbfff031) |
 
 ### 2.1 `MeridianRouter`
-* **Address (Stellar Mainnet)**: `CDMERIDIAN7Z5Z77UP7GYPYGFOWFGW7C7J6I4YP2AFGSADRKQY62SYUFLPN`
+* **Address (Stellar Soroban Testnet)**: `CATRAXQGN7H73LDWWLUW3IBDNZG2XYQEUIVROC2UDOQ6XRPYEKK2WUED`
+* **WASM Hash**: `5feb037a7dd5a85e75e804b16f0b358a19558943939f1483f501c38b945bad55`
 * **Responsibilities**:
-  * Acts as recipient for Circle CCTP inbound minting via `CctpForwarder`.
+  * Acts as recipient for Circle CCTP inbound minting.
   * Verifies replay protection against `ProcessedMessage(BytesN<32>)`.
-  * Deducts relayer/paymaster reimbursement fee.
-  * Dynamically queries `SoroswapRouter` / `AggregatorV3` for token swapping.
+  * Deducts relayer/paymaster reimbursement fee within bounded `max_relayer_fee_bps`.
+  * Dynamically invokes `SoroswapRouter` (`CAG5LRYQ5JVEUI5TEID72EYOVX44TTUJT5BQR2J6J77FH65PCCFAJDDH` on Mainnet) for token swapping.
   * Dispatches tokens to target contracts implementing the Soroban Vault interface (`deposit(amount, recipient)`).
 
 ### 2.2 `MeridianPaymaster`
+* **Address (Stellar Soroban Testnet)**: `CCZIOZNGCPEB5KQSQW4DECO3AFTNXLTAOECAR3ZBS3QVIG4KSMUS2S6I`
+* **WASM Hash**: `7fdfeb22c0aa35c7c104579eb3cbecb48adcd2057e4edcf2608c65a0f0a64747`
 * **Responsibilities**:
   * Solves the "Zero-XLM" cold-start dilemma for non-Stellar users.
   * Maintains an operational reserve of XLM to sponsor transaction envelope gas fees.
-  * Reimburses itself via fractional USDC deductions from swapped capital.
-  * Implements periodic automated rebalancing: sells collected USDC fees back into XLM via Soroswap AMM pools.
+  * Reimburses itself via fractional USDC deductions (plus configurable basis-point markup) and tracks per-user sponsored volume.
+  * Implements automated rebalancing (`rebalance_native`): sells collected USDC fees back into XLM via Soroswap AMM pools.
 
 ### 2.3 `MeridianCompliance`
+* **Address (Stellar Soroban Testnet)**: `CB65GHAERYSDNPGZYMEPESEKGC3PKL6UNOPYAZV6QUFW37OL7J24YU2S`
+* **WASM Hash**: `641c2aaeb25d764bdcb9a488628b0845f4a02dba4abef8263d3d975a3ce361ba`
 * **Responsibilities**:
   * Enforces SEP-8 regulated asset compliance on Soroban.
   * Restricts access to permissioned institutional RWA vaults based on verifiable identity credentials and country whitelists.

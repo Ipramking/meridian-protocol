@@ -6,7 +6,7 @@ license = "Apache-2.0"
 description = "Institutional Compliance & KYC Verification Gate for Meridian Protocol"
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["cdylib"]
 
 [dependencies]
 soroban-sdk = { workspace = true }

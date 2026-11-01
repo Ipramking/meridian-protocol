@@ -1,0 +1,33 @@
+{
+  "network": "Stellar Soroban Testnet",
+  "rpcUrl": "https://soroban-testnet.stellar.org",
+  "networkPassphrase": "Test SDF Network ; September 2015",
+  "deployerPublicKey": "GCAAHYYUW26D63RKTKAFNEGKMQFH7UTV544D3QF4GH6PTUBCTSGDIWW5",
+  "deployedAt": "2026-11-01T14:47:45.860Z",
+  "contracts": {
+    "meridianRouter": {
+      "contractId": "CATRAXQGN7H73LDWWLUW3IBDNZG2XYQEUIVROC2UDOQ6XRPYEKK2WUED",
+      "wasmHash": "5feb037a7dd5a85e75e804b16f0b358a19558943939f1483f501c38b945bad55",
+      "wasmUploadTx": "ed9a5bae25a75268cf8754a20b3f4b2dc7d0adbcfaa93255c2fe2886149036cd",
+      "createContractTx": "97ed2a1d3945a1fc6c0ca33fbdd95c2b63a960b85bdc7b8c243804e106b1beb6",
+      "initTx": "ceff2fcbb1c61eac260f1bcf7883255d06fd658f7e7ef31d965b2700f2277b98",
+      "explorerUrl": "https://stellar.expert/explorer/testnet/contract/CATRAXQGN7H73LDWWLUW3IBDNZG2XYQEUIVROC2UDOQ6XRPYEKK2WUED"
+    },
+    "meridianPaymaster": {
+      "contractId": "CCZIOZNGCPEB5KQSQW4DECO3AFTNXLTAOECAR3ZBS3QVIG4KSMUS2S6I",
+      "wasmHash": "7fdfeb22c0aa35c7c104579eb3cbecb48adcd2057e4edcf2608c65a0f0a64747",
+      "wasmUploadTx": "e233bbb9aea271d8b0cea46293e591026dd7cae5536c574ab5cc4eefb160c3d3",
+      "createContractTx": "dacc7fee382ea17eb82552100ff06551b11e681cb3838068c4756a565f07fc05",
+      "initTx": "1b906928f8423400fa6f954c5edafbe022f2530074bda462a1b3122a83ef5424",
+      "explorerUrl": "https://stellar.expert/explorer/testnet/contract/CCZIOZNGCPEB5KQSQW4DECO3AFTNXLTAOECAR3ZBS3QVIG4KSMUS2S6I"
+    },
+    "meridianCompliance": {
+      "contractId": "CB65GHAERYSDNPGZYMEPESEKGC3PKL6UNOPYAZV6QUFW37OL7J24YU2S",
+      "wasmHash": "641c2aaeb25d764bdcb9a488628b0845f4a02dba4abef8263d3d975a3ce361ba",
+      "wasmUploadTx": "dcfbdac970c6ffdc64ec67b1a7ac9b76ba154312eaf63c3557f0d94bd6fc4fb6",
+      "createContractTx": "d84e11cb4eb95354a1d37ffd18c3492ecd34120b22f17ae43408d94fd1c1710c",
+      "initTx": "9e0729de3da687076c282acbdb04fe762e2cbb81f6d8fef27fb7ea8acbfff031",
+      "explorerUrl": "https://stellar.expert/explorer/testnet/contract/CB65GHAERYSDNPGZYMEPESEKGC3PKL6UNOPYAZV6QUFW37OL7J24YU2S"
+    }
+  }
+}
