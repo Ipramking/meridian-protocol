@@ -3,3 +3,4 @@ export * from './cctp.js';
 export * from './router.js';
 export * from './paymaster.js';
 export * from './rwa-vaults.js';
+export * from './anchor.js';
