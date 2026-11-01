@@ -28,6 +28,17 @@
       "createContractTx": "d84e11cb4eb95354a1d37ffd18c3492ecd34120b22f17ae43408d94fd1c1710c",
       "initTx": "9e0729de3da687076c282acbdb04fe762e2cbb81f6d8fef27fb7ea8acbfff031",
       "explorerUrl": "https://stellar.expert/explorer/testnet/contract/CB65GHAERYSDNPGZYMEPESEKGC3PKL6UNOPYAZV6QUFW37OL7J24YU2S"
+    },
+    "meridianVault": {
+      "contractId": "CC4IZUGVELOW5Z7OBUSZWQSPBPM64IQYFA52YQZ7WGFVDMWRVO4OYAGK",
+      "wasmHash": "7b187c77142e232b4086d5ba1eb1391926902f9997d38211c1247c4df02fc2f6",
+      "wasmUploadTx": "92a052d9a0bf8f7ba512faee882c5b6d9f4c4b331561bfd6e7ce74a50b51f29c",
+      "createContractTx": "fe5172a033ec825081ef13a3cc0688abcf80e58ed065c5de21c93bd888883e18",
+      "initTx": "65574d14cca2f612cc8ae74f0bdf94e9de128be7e948c1c429da955e0ef409d5",
+      "underlyingAsset": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+      "router": "CATRAXQGN7H73LDWWLUW3IBDNZG2XYQEUIVROC2UDOQ6XRPYEKK2WUED",
+      "apyEstimate": "4.25%",
+      "explorerUrl": "https://stellar.expert/explorer/testnet/contract/CC4IZUGVELOW5Z7OBUSZWQSPBPM64IQYFA52YQZ7WGFVDMWRVO4OYAGK"
     }
   }
 }

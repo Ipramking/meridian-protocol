@@ -9,16 +9,18 @@ export interface SupportedRwaVault {
   description: string;
 }
 
+export const MERIDIAN_RWA_VAULT_CONTRACT = 'CC4IZUGVELOW5Z7OBUSZWQSPBPM64IQYFA52YQZ7WGFVDMWRVO4OYAGK';
+
 export const SUPPORTED_STELLAR_VAULTS: SupportedRwaVault[] = [
   {
-    id: 'spiko-eutbl',
-    name: 'Spiko Euro T-Bills (eurSAFO)',
-    issuer: 'Spiko / CACEIS Custody',
+    id: 'meridian-tbill-vault',
+    name: 'Spiko Liquid Treasury Vault (mTBILL)',
+    issuer: 'Meridian / Spiko CACEIS Custody',
     assetType: 'TREASURY',
-    targetAddress: 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC',
+    targetAddress: MERIDIAN_RWA_VAULT_CONTRACT,
     baseAsset: 'USDC',
-    apyEstimate: '3.65%',
-    description: 'Direct institutional exposure to European Sovereign Treasury Bills tokenized on Stellar.',
+    apyEstimate: '4.25%',
+    description: 'On-chain institutional European sovereign treasury bill vault with atomic CCTP routing on Stellar Soroban.',
   },
   {
     id: 'blend-usdc-market',

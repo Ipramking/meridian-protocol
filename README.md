@@ -23,6 +23,7 @@ All three core Soroban smart contracts are compiled to `wasm32v1-none`, deployed
 | **MeridianRouter** | [`CATRAXQGN7H73LDWWLUW3IBDNZG2XYQEUIVROC2UDOQ6XRPYEKK2WUED`](https://stellar.expert/explorer/testnet/contract/CATRAXQGN7H73LDWWLUW3IBDNZG2XYQEUIVROC2UDOQ6XRPYEKK2WUED) | [`97ed2a1d...`](https://stellar.expert/explorer/testnet/tx/97ed2a1d3945a1fc6c0ca33fbdd95c2b63a960b85bdc7b8c243804e106b1beb6) | [`ceff2fcb...`](https://stellar.expert/explorer/testnet/tx/ceff2fcbb1c61eac260f1bcf7883255d06fd658f7e7ef31d965b2700f2277b98) |
 | **MeridianPaymaster** | [`CCZIOZNGCPEB5KQSQW4DECO3AFTNXLTAOECAR3ZBS3QVIG4KSMUS2S6I`](https://stellar.expert/explorer/testnet/contract/CCZIOZNGCPEB5KQSQW4DECO3AFTNXLTAOECAR3ZBS3QVIG4KSMUS2S6I) | [`dacc7fee...`](https://stellar.expert/explorer/testnet/tx/dacc7fee382ea17eb82552100ff06551b11e681cb3838068c4756a565f07fc05) | [`1b906928...`](https://stellar.expert/explorer/testnet/tx/1b906928f8423400fa6f954c5edafbe022f2530074bda462a1b3122a83ef5424) |
 | **MeridianCompliance** | [`CB65GHAERYSDNPGZYMEPESEKGC3PKL6UNOPYAZV6QUFW37OL7J24YU2S`](https://stellar.expert/explorer/testnet/contract/CB65GHAERYSDNPGZYMEPESEKGC3PKL6UNOPYAZV6QUFW37OL7J24YU2S) | [`d84e11cb...`](https://stellar.expert/explorer/testnet/tx/d84e11cb4eb95354a1d37ffd18c3492ecd34120b22f17ae43408d94fd1c1710c) | [`9e0729de...`](https://stellar.expert/explorer/testnet/tx/9e0729de3da687076c282acbdb04fe762e2cbb81f6d8fef27fb7ea8acbfff031) |
+| **MeridianRwaVault** | [`CC4IZUGVELOW5Z7OBUSZWQSPBPM64IQYFA52YQZ7WGFVDMWRVO4OYAGK`](https://stellar.expert/explorer/testnet/contract/CC4IZUGVELOW5Z7OBUSZWQSPBPM64IQYFA52YQZ7WGFVDMWRVO4OYAGK) | [`fe5172a0...`](https://stellar.expert/explorer/testnet/tx/fe5172a033ec825081ef13a3cc0688abcf80e58ed065c5de21c93bd888883e18) | [`65574d14...`](https://stellar.expert/explorer/testnet/tx/65574d14cca2f612cc8ae74f0bdf94e9de128be7e948c1c429da955e0ef409d5) |
 
 ---
 
@@ -53,6 +54,13 @@ The `MeridianRouter` contract coordinates cross-chain message consumption, DEX r
 Enforces identity verification rules for regulated assets on Soroban:
 * Validates KYC credentials, country ISO codes, and accredited investor flags prior to routing capital into permissioned asset vaults.
 * Integrates with Stellar SEP-8 regulated asset approval interfaces.
+
+### 4. Institutional RWA Yield Vault (`contracts/vault`)
+The destination yield sink (`MeridianRwaVault` / `mTBILL`) completing the cross-chain pipeline:
+* **Standard Soroban Vault Interface**: Exposes `deposit(amount, on_behalf_of)` called atomically by `MeridianRouter` upon CCTP minting.
+* **Proportional Share Minting**: Calculates and issues tokenized yield shares based on current vault total assets and share supply.
+* **Direct Access & Redemptions**: Accommodates direct user deposits (`deposit_direct`) and seamless share redemptions back into underlying USDC (`withdraw`).
+* **Circuit Breaker Controls**: Admin toggle to pause and unpause vault activity in volatile market conditions.
 
 ---
 
@@ -90,7 +98,8 @@ Enforces identity verification rules for regulated assets on Soroban:
 ├── contracts/
 │   ├── router/          # Core cross-chain intent settlement contract
 │   ├── paymaster/       # Gas sponsorship and reserve rebalancer
-│   └── compliance/      # Institutional KYC and SEP-8 access gate
+│   ├── compliance/      # Institutional KYC and SEP-8 access gate
+│   └── vault/           # Institutional RWA Yield Vault (mTBILL)
 ├── deployments/
 │   └── testnet.json     # Live Stellar Soroban Testnet deployment manifest
 ├── packages/

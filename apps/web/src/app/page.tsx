@@ -8,6 +8,7 @@ import {
   MERIDIAN_ROUTER_CONTRACT,
   MERIDIAN_PAYMASTER_CONTRACT,
   MERIDIAN_COMPLIANCE_CONTRACT,
+  MERIDIAN_RWA_VAULT_CONTRACT,
 } from '@meridian-protocol/sdk';
 
 const DEPLOYED_CONTRACTS = [
@@ -28,6 +29,12 @@ const DEPLOYED_CONTRACTS = [
     role: 'SEP-8 Regulated RWA KYC & Accreditation Gate',
     address: MERIDIAN_COMPLIANCE_CONTRACT,
     initTx: '9e0729de3da687076c282acbdb04fe762e2cbb81f6d8fef27fb7ea8acbfff031',
+  },
+  {
+    name: 'MeridianRwaVault',
+    role: 'Institutional Treasury Yield Vault & Share Minting (mTBILL)',
+    address: MERIDIAN_RWA_VAULT_CONTRACT,
+    initTx: '65574d14cca2f612cc8ae74f0bdf94e9de128be7e948c1c429da955e0ef409d5',
   },
 ];
 
@@ -76,7 +83,7 @@ export default function HomePage() {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             {DEPLOYED_CONTRACTS.map((c) => (
               <div
                 key={c.address}

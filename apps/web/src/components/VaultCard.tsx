@@ -32,6 +32,17 @@ export function VaultCard({ vault }: { vault: SupportedRwaVault }) {
             <span>Underlying Asset</span>
             <span className="text-slate-200 font-medium">{vault.baseAsset}</span>
           </div>
+          <div className="flex justify-between items-center">
+            <span>Contract Address</span>
+            <a
+              href={`https://stellar.expert/explorer/testnet/contract/${vault.targetAddress}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-stellar-blue hover:underline font-mono text-[11px]"
+            >
+              {vault.targetAddress.slice(0, 6)}...{vault.targetAddress.slice(-4)} ↗
+            </a>
+          </div>
         </div>
       </div>
 

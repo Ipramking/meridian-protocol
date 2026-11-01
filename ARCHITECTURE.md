@@ -14,6 +14,7 @@ All protocol contracts are deployed, initialized, and verifiable on Stellar Soro
 | `MeridianRouter` | [`CATRAXQGN7H73LDWWLUW3IBDNZG2XYQEUIVROC2UDOQ6XRPYEKK2WUED`](https://stellar.expert/explorer/testnet/contract/CATRAXQGN7H73LDWWLUW3IBDNZG2XYQEUIVROC2UDOQ6XRPYEKK2WUED) | [`ceff2fcb...77b98`](https://stellar.expert/explorer/testnet/tx/ceff2fcbb1c61eac260f1bcf7883255d06fd658f7e7ef31d965b2700f2277b98) |
 | `MeridianPaymaster` | [`CCZIOZNGCPEB5KQSQW4DECO3AFTNXLTAOECAR3ZBS3QVIG4KSMUS2S6I`](https://stellar.expert/explorer/testnet/contract/CCZIOZNGCPEB5KQSQW4DECO3AFTNXLTAOECAR3ZBS3QVIG4KSMUS2S6I) | [`1b906928...f5424`](https://stellar.expert/explorer/testnet/tx/1b906928f8423400fa6f954c5edafbe022f2530074bda462a1b3122a83ef5424) |
 | `MeridianCompliance` | [`CB65GHAERYSDNPGZYMEPESEKGC3PKL6UNOPYAZV6QUFW37OL7J24YU2S`](https://stellar.expert/explorer/testnet/contract/CB65GHAERYSDNPGZYMEPESEKGC3PKL6UNOPYAZV6QUFW37OL7J24YU2S) | [`9e0729de...ff031`](https://stellar.expert/explorer/testnet/tx/9e0729de3da687076c282acbdb04fe762e2cbb81f6d8fef27fb7ea8acbfff031) |
+| `MeridianRwaVault` | [`CC4IZUGVELOW5Z7OBUSZWQSPBPM64IQYFA52YQZ7WGFVDMWRVO4OYAGK`](https://stellar.expert/explorer/testnet/contract/CC4IZUGVELOW5Z7OBUSZWQSPBPM64IQYFA52YQZ7WGFVDMWRVO4OYAGK) | [`65574d14...09d5`](https://stellar.expert/explorer/testnet/tx/65574d14cca2f612cc8ae74f0bdf94e9de128be7e948c1c429da955e0ef409d5) |
 
 ### 2.1 `MeridianRouter`
 * **Address (Stellar Soroban Testnet)**: `CATRAXQGN7H73LDWWLUW3IBDNZG2XYQEUIVROC2UDOQ6XRPYEKK2WUED`
@@ -40,6 +41,17 @@ All protocol contracts are deployed, initialized, and verifiable on Stellar Soro
 * **Responsibilities**:
   * Enforces SEP-8 regulated asset compliance on Soroban.
   * Restricts access to permissioned institutional RWA vaults based on verifiable identity credentials and country whitelists.
+
+### 2.4 `MeridianRwaVault`
+* **Address (Stellar Soroban Testnet)**: `CC4IZUGVELOW5Z7OBUSZWQSPBPM64IQYFA52YQZ7WGFVDMWRVO4OYAGK`
+* **WASM Hash**: `7b187c77142e232b4086d5ba1eb1391926902f9997d38211c1247c4df02fc2f6`
+* **Underlying Asset**: `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA` (Testnet USDC SAC)
+* **Authorized Router**: `CATRAXQGN7H73LDWWLUW3IBDNZG2XYQEUIVROC2UDOQ6XRPYEKK2WUED`
+* **Responsibilities**:
+  * Provides on-chain institutional European sovereign treasury bill vault (`mTBILL`) yield aggregation.
+  * Implements the standard Soroban Vault interface (`deposit(amount, on_behalf_of)`), allowing `MeridianRouter` to automatically forward inbound cross-chain USDC and mint proportional shares for the destination account.
+  * Supports direct individual deposits (`deposit_direct`) and investor share redemptions (`withdraw`).
+  * Enforces emergency circuit breaker controls (`set_paused`).
 
 ---
 

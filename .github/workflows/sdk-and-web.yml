@@ -29,3 +29,6 @@ jobs:
 
       - name: Build Web App
         run: npm run build --workspace=@meridian-protocol/web
+
+      - name: Run E2E Integration Pipeline Test
+        run: node scripts/test-cctp-flow.mjs

@@ -1,0 +1,15 @@
+[package]
+name = "meridian-vault"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Institutional RWA & Yield Vault Contract (SEP-41 / Soroban Vault Standard) for Meridian Protocol"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+soroban-sdk = { workspace = true }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
