@@ -1,5 +1,5 @@
 import { CrossChainQuoteRequest, CrossChainQuoteResponse, MeridianIntentParams } from './types.js';
-import { CCTP_DOMAINS } from './cctp.js';
+import { CCTP_DOMAINS, CCTP_TOKEN_MESSENGERS } from './cctp.js';
 
 export const SOROSWAP_ROUTER_MAINNET = 'CAG5LRYQ5JVEUI5TEID72EYOVX44TTUJT5BQR2J6J77FH65PCCFAJDDH';
 export const MERIDIAN_ROUTER_CONTRACT = 'CATRAXQGN7H73LDWWLUW3IBDNZG2XYQEUIVROC2UDOQ6XRPYEKK2WUED';
@@ -34,7 +34,9 @@ export class MeridianSDK {
           name: 'Burn on Origin',
           chain: request.sourceChain,
           description: `Burn ${request.amountIn} USDC via Circle CCTP TokenMessenger`,
-          contract: '0xBd3fa81B58Ba92a82136038B25aDec7066af3155',
+          contract:
+            CCTP_TOKEN_MESSENGERS[request.sourceChain.toLowerCase()] ||
+            CCTP_TOKEN_MESSENGERS.ethereum,
         },
         {
           name: 'Circle Attestation',

@@ -14,7 +14,7 @@ export function Navbar() {
               MERIDIAN
             </span>
             <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-stellar-accent/20 text-stellar-blue border border-stellar-blue/30">
-              Soroban Mainnet & CCTP
+              Soroban Testnet & CCTP Domain 27
             </span>
           </div>
         </div>

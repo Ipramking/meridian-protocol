@@ -46,10 +46,13 @@ export function VaultCard({ vault }: { vault: SupportedRwaVault }) {
         </div>
       </div>
 
-      <button className="mt-4 w-full py-2.5 rounded-lg bg-slate-800 hover:bg-stellar-blue/20 hover:text-stellar-blue hover:border-stellar-blue/40 border border-slate-700 text-xs font-semibold text-slate-200 flex items-center justify-center gap-1.5 transition">
-        <span>1-Click Deposit from Arbitrum</span>
+      <a
+        href="#swap"
+        className="mt-4 w-full py-2.5 rounded-lg bg-slate-800 hover:bg-stellar-blue/20 hover:text-stellar-blue hover:border-stellar-blue/40 border border-slate-700 text-xs font-semibold text-slate-200 flex items-center justify-center gap-1.5 transition"
+      >
+        <span>Deposit into Vault via Router</span>
         <ArrowUpRight className="w-3.5 h-3.5" />
-      </button>
+      </a>
     </div>
   );
 }
