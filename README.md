@@ -16,7 +16,7 @@ Cross-Chain Intent Router and Capital Settlement Engine for Stellar Soroban Real
 
 ## Live On-Chain Deployments (Stellar Soroban Testnet)
 
-All three core Soroban smart contracts are compiled to `wasm32v1-none`, deployed, and initialized on Stellar Soroban Testnet (`https://soroban-testnet.stellar.org`):
+All four core Soroban smart contracts are compiled to `wasm32v1-none`, deployed, and initialized on Stellar Soroban Testnet (`https://soroban-testnet.stellar.org`):
 
 | Contract | Contract Address | Deploy Tx | Init Tx |
 |---|---|---|---|
