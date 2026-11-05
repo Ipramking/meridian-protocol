@@ -14,8 +14,7 @@
     "contracts:build": "cargo build --target wasm32v1-none --release",
     "contracts:test": "cargo build --target wasm32v1-none --release && cargo test --workspace --lib",
     "deploy:testnet": "node scripts/deploy.mjs --network testnet",
-    "e2e:testnet": "node scripts/e2e-testnet.mjs",
-    "seed:issues": "node issues/seed-issues.js"
+    "e2e:testnet": "node scripts/e2e-testnet.mjs"
   },
   "keywords": [
     "stellar",
