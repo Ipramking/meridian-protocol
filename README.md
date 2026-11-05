@@ -1,165 +1,122 @@
 # Meridian Protocol
 
-[![Contracts CI](https://github.com/Ipramking/meridian-protocol/actions/workflows/contracts.yml/badge.svg)](https://github.com/Ipramking/meridian-protocol/actions)
-[![SDK & Web CI](https://github.com/Ipramking/meridian-protocol/actions/workflows/sdk-and-web.yml/badge.svg)](https://github.com/Ipramking/meridian-protocol/actions)
-[![Live Demo](https://img.shields.io/badge/Live_Demo-Online-10b981.svg)](https://ipramking.github.io/meridian-protocol/)
+[![Contracts CI](https://github.com/Ipramking/meridian-protocol/actions/workflows/contracts.yml/badge.svg)](https://github.com/Ipramking/meridian-protocol/actions/workflows/contracts.yml)
+[![SDK & Web CI](https://github.com/Ipramking/meridian-protocol/actions/workflows/sdk-and-web.yml/badge.svg)](https://github.com/Ipramking/meridian-protocol/actions/workflows/sdk-and-web.yml)
+[![Testnet E2E](https://github.com/Ipramking/meridian-protocol/actions/workflows/testnet-e2e.yml/badge.svg)](https://github.com/Ipramking/meridian-protocol/actions/workflows/testnet-e2e.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Soroban](https://img.shields.io/badge/Soroban-v22-4c1d95.svg)](https://stellar.org/soroban)
 
-Cross-Chain Intent Router and Capital Settlement Engine for Stellar Soroban Real-World Assets (RWAs), Money Markets, and Fiat Anchors.
+Cross-chain capital router for Stellar. USDC arriving over Circle CCTP is fast-filled on Stellar by a relayer and routed through a Soroban router into allowlisted USDC vaults, with on-chain KYC gating for regulated vaults and a SEP-24 off-ramp to local currency.
 
-* **Live Web Application Demo**: [https://ipramking.github.io/meridian-protocol/](https://ipramking.github.io/meridian-protocol/)
-* **Architecture Specification**: [ARCHITECTURE.md](ARCHITECTURE.md)
-* **On-Chain Deployment Manifest**: [deployments/testnet.json](deployments/testnet.json)
+- **App (Stellar testnet):** https://ipramking.github.io/meridian-protocol/
+- **Architecture and trust model:** [ARCHITECTURE.md](ARCHITECTURE.md)
+- **Deployment manifest:** [deployments/testnet.json](deployments/testnet.json)
+- **Receipts from the last live end-to-end run:** [deployments/testnet-receipts.json](deployments/testnet-receipts.json)
 
----
+## Status
 
-## Live On-Chain Deployments (Stellar Soroban Testnet)
+Everything below marked **live** is deployed on Stellar **testnet** and exercised by [`scripts/e2e-testnet.mjs`](scripts/e2e-testnet.mjs) with fresh accounts and real Circle testnet USDC. Nothing is on mainnet yet.
 
-All four core Soroban smart contracts are compiled to `wasm32v1-none`, deployed, and initialized on Stellar Soroban Testnet (`https://soroban-testnet.stellar.org`):
+| Capability | Status |
+|---|---|
+| Router deposit of a user's own USDC into an allowlisted vault | live (testnet) |
+| Vault share accounting, withdrawals, manager-distributed yield | live (testnet) |
+| On-chain KYC gate (`compliance.is_eligible`) for the accredited vault | live (testnet) |
+| Relayer fast-fill through `execute_intent`, paid from the relayer's own USDC, with replay protection | live (testnet) |
+| CCTP fee quotes for routes into Stellar (domain 27) from Circle Iris | live (Iris sandbox) |
+| Relayer CLI that waits for a Circle attestation and checks domain, amount and mint recipient before filling | built; not yet run against a real origin-chain burn |
+| SEP-10 sign-in and SEP-24 withdrawal against the SDF test anchor | live (testnet) |
+| Soroswap swap leg inside the router | implemented and tested with a Soroswap-compatible mock; not exercised on testnet (no pool for Circle testnet USDC) |
+| On-chain CCTP message verification (`receive_message`) | roadmap |
+| Gasless onboarding via fee-bump sponsorship | roadmap (the paymaster contract only does fee accounting today) |
+| Mainnet deployment | roadmap (`scripts/deploy.mjs --network mainnet --yes-mainnet`) |
+| Security audit | none yet |
 
-| Contract | Contract Address | Deploy Tx | Init Tx |
-|---|---|---|---|
-| **MeridianRouter** | [`CATRAXQGN7H73LDWWLUW3IBDNZG2XYQEUIVROC2UDOQ6XRPYEKK2WUED`](https://stellar.expert/explorer/testnet/contract/CATRAXQGN7H73LDWWLUW3IBDNZG2XYQEUIVROC2UDOQ6XRPYEKK2WUED) | [`97ed2a1d...`](https://stellar.expert/explorer/testnet/tx/97ed2a1d3945a1fc6c0ca33fbdd95c2b63a960b85bdc7b8c243804e106b1beb6) | [`ceff2fcb...`](https://stellar.expert/explorer/testnet/tx/ceff2fcbb1c61eac260f1bcf7883255d06fd658f7e7ef31d965b2700f2277b98) |
-| **MeridianPaymaster** | [`CCZIOZNGCPEB5KQSQW4DECO3AFTNXLTAOECAR3ZBS3QVIG4KSMUS2S6I`](https://stellar.expert/explorer/testnet/contract/CCZIOZNGCPEB5KQSQW4DECO3AFTNXLTAOECAR3ZBS3QVIG4KSMUS2S6I) | [`dacc7fee...`](https://stellar.expert/explorer/testnet/tx/dacc7fee382ea17eb82552100ff06551b11e681cb3838068c4756a565f07fc05) | [`1b906928...`](https://stellar.expert/explorer/testnet/tx/1b906928f8423400fa6f954c5edafbe022f2530074bda462a1b3122a83ef5424) |
-| **MeridianCompliance** | [`CB65GHAERYSDNPGZYMEPESEKGC3PKL6UNOPYAZV6QUFW37OL7J24YU2S`](https://stellar.expert/explorer/testnet/contract/CB65GHAERYSDNPGZYMEPESEKGC3PKL6UNOPYAZV6QUFW37OL7J24YU2S) | [`d84e11cb...`](https://stellar.expert/explorer/testnet/tx/d84e11cb4eb95354a1d37ffd18c3492ecd34120b22f17ae43408d94fd1c1710c) | [`9e0729de...`](https://stellar.expert/explorer/testnet/tx/9e0729de3da687076c282acbdb04fe762e2cbb81f6d8fef27fb7ea8acbfff031) |
-| **MeridianRwaVault** | [`CC4IZUGVELOW5Z7OBUSZWQSPBPM64IQYFA52YQZ7WGFVDMWRVO4OYAGK`](https://stellar.expert/explorer/testnet/contract/CC4IZUGVELOW5Z7OBUSZWQSPBPM64IQYFA52YQZ7WGFVDMWRVO4OYAGK) | [`fe5172a0...`](https://stellar.expert/explorer/testnet/tx/fe5172a033ec825081ef13a3cc0688abcf80e58ed065c5de21c93bd888883e18) | [`65574d14...`](https://stellar.expert/explorer/testnet/tx/65574d14cca2f612cc8ae74f0bdf94e9de128be7e948c1c429da955e0ef409d5) |
+## Deployed contracts (Stellar testnet)
 
----
+| Contract | Address |
+|---|---|
+| MeridianRouter | [`CD6BDASBGQNDY6K66ZWG5IVOZXAAJ3IWD2WWEA25KF6R6UTU6ZUWBOCR`](https://stellar.expert/explorer/testnet/contract/CD6BDASBGQNDY6K66ZWG5IVOZXAAJ3IWD2WWEA25KF6R6UTU6ZUWBOCR) |
+| MeridianCompliance | [`CAHUSTNCX7KAQSB5P4AAFUTWCPJ5H2FEUAOX5RPGCVZO4E24TO5BQZFC`](https://stellar.expert/explorer/testnet/contract/CAHUSTNCX7KAQSB5P4AAFUTWCPJ5H2FEUAOX5RPGCVZO4E24TO5BQZFC) |
+| Meridian Open USDC Vault (`mvUSDC`) | [`CAYGFI63GSSZL2PRN4QZ37UAQ6ITAPARJ4WDAO27765GWP2QNDW3LF6L`](https://stellar.expert/explorer/testnet/contract/CAYGFI63GSSZL2PRN4QZ37UAQ6ITAPARJ4WDAO27765GWP2QNDW3LF6L) |
+| Meridian Accredited USDC Vault (`maUSDC`, KYC-gated) | [`CCTCBCSN2YT4UWGFI6XEL3P3TPZOKCXEWQAP4NCA4Q5B46ODE77DPPQH`](https://stellar.expert/explorer/testnet/contract/CCTCBCSN2YT4UWGFI6XEL3P3TPZOKCXEWQAP4NCA4Q5B46ODE77DPPQH) |
+| MeridianPaymaster | [`CDIK7H27J4BCVQWSPMALTPXNVBRUZSCLR3PGCFCOVG2AJMY2RLN3C2AK`](https://stellar.expert/explorer/testnet/contract/CDIK7H27J4BCVQWSPMALTPXNVBRUZSCLR3PGCFCOVG2AJMY2RLN3C2AK) |
 
-## Abstract
+Wiring: router -> USDC SAC `CBIELTK6…DAMA` (Circle testnet USDC), Soroswap testnet router `CCJUD55A…7BRD`, compliance above; relayer fee capped on-chain at 100 bps. Every deploy, init and allowlist transaction is in [deployments/testnet.json](deployments/testnet.json).
 
-Meridian Protocol provides deterministic, single-signature liquidity routing between external EVM/SVM networks (Ethereum, Arbitrum, Base, Optimism, Solana) and the Stellar Soroban runtime. Built on Circle Cross-Chain Transfer Protocol (CCTP) and Soroswap Aggregator V3, Meridian eliminates destination account friction through native transaction envelope sponsorship and enables direct atomic settlement into permissioned institutional RWA vaults and SEP-24/SEP-6 fiat anchors.
+### Verified run
 
----
+The last end-to-end run (see [receipts](deployments/testnet-receipts.json)) bought USDC on the Stellar DEX, then:
 
-## Core Primitives
+- [router.deposit 10 USDC into the open vault](https://stellar.expert/explorer/testnet/tx/0b860476e0f8d3352121c9600c6a28a949f22a516a3c92ebde3c9a085e87d78b)
+- [vault.withdraw half the shares](https://stellar.expert/explorer/testnet/tx/ff2627fddf6efbec6ca329ec7f9cb7009fef0e0816a070fe42b303eb6341a65c)
+- was rejected from the accredited vault with `NotEligible`, then [verified by the compliance admin](https://stellar.expert/explorer/testnet/tx/52ebdc1732ef03c6914877bc464a93ab4f3bccf32a3bdb7f0199c560d0af68a5) and [deposited](https://stellar.expert/explorer/testnet/tx/1d9967e9fa76baec4a9ef8b4b791519c02c57fc419a1e68bb96f4e6b526d7acd)
+- had a [relayer fill land in its vault position](https://stellar.expert/explorer/testnet/tx/5218d6902d28cb66562858f131f8b8f16d69df77ab3edf67c278be73f57a18d8) (a test intent: no origin-chain burn stands behind it), and the replay was rejected with `AlreadyFilled`
 
-### 1. Gasless Paymaster (`contracts/paymaster`)
-EVM cross-chain transfers to fresh Stellar accounts suffer from a cold-start reserve requirement: destination wallets require native XLM for base reserves and transaction envelope fees before any Soroban contract invocation or swap can execute.
+## How it works
 
-Meridian Paymaster resolves this by:
-* Sponsoring base ledger envelope fees from an on-chain operational XLM reserve.
-* Deducting an equivalent fractional fee (with configurable basis-point markup) directly from the bridged USDC principal (`record_sponsorship`).
-* Maintaining automated rebalancing (`rebalance_native`) via Soroswap AMM pools to replenish XLM reserves upon reaching configurable volume thresholds.
+**Stellar-native deposit.** A user calls `MeridianRouter.deposit(from, amount, vault)`. The router pulls the user's USDC, checks the vault is allowlisted (and, for gated vaults, that `compliance.is_eligible(from)`), approves the vault and calls `vault.deposit`, which only accepts calls from the router. Shares are minted 1:1 until the manager distributes realized yield.
 
-### 2. Intent Routing Engine (`contracts/router`)
-The `MeridianRouter` contract coordinates cross-chain message consumption, DEX routing, and downstream allocation:
-* **Attestation Verification**: Ingests Circle Iris attestation signatures via the Stellar CCTP interfaces.
-* **Atomic Route Execution**: Routes inbound USDC through Soroswap Aggregator V3 across Soroswap, Phoenix (CLMM), and Aquarius liquidity pools within a single host transaction.
-* **Vault Dispatch**: Atomically deposits output tokens into downstream contracts implementing the standard Soroban Vault interface (`deposit(amount, recipient)`), including Spiko Treasury products and Blend isolated pools.
-* **Replay Protection**: Enforces message hash uniqueness via temporary storage keys with automated ledger TTL bumping.
+**Cross-chain fast fill.** A user burns USDC on an EVM chain with CCTP to Stellar (domain 27), naming the relayer as mint recipient. The relayer waits for Circle's attestation, checks the attested message, and calls `execute_intent` with its **own** USDC. The router delivers to the recipient or a vault and records the fill under `sha256(message_hash || intent)`. The CCTP mint then repays the relayer. The router never spends a balance it holds, so a bad intent can only cost the relayer that signed it. See [ARCHITECTURE.md](ARCHITECTURE.md#trust-model) for what is and isn't enforced on-chain.
 
-### 3. Institutional Compliance Gate (`contracts/compliance`)
-Enforces identity verification rules for regulated assets on Soroban:
-* Validates KYC credentials, country ISO codes, and accredited investor flags prior to routing capital into permissioned asset vaults.
-* Integrates with Stellar SEP-8 regulated asset approval interfaces.
+**Off-ramp.** The app signs a SEP-10 challenge with Freighter and starts a SEP-24 interactive withdrawal at the anchor.
 
-### 4. Institutional RWA Yield Vault (`contracts/vault`)
-The destination yield sink (`MeridianRwaVault` / `mTBILL`) completing the cross-chain pipeline:
-* **Standard Soroban Vault Interface**: Exposes `deposit(amount, on_behalf_of)` called atomically by `MeridianRouter` upon CCTP minting.
-* **Proportional Share Minting**: Calculates and issues tokenized yield shares based on current vault total assets and share supply.
-* **Direct Access & Redemptions**: Accommodates direct user deposits (`deposit_direct`) and seamless share redemptions back into underlying USDC (`withdraw`).
-* **Circuit Breaker Controls**: Admin toggle to pause and unpause vault activity in volatile market conditions.
+## Security properties and the tests that check them
 
----
+| Property | Test |
+|---|---|
+| Router funds can't be drained through `execute_intent` | `router::test_router_balance_cannot_be_drained` |
+| A filled intent can't be replayed; fill records are persistent and outlive the 7-day deadline cap | `router::test_fill_uses_relayer_liquidity_and_blocks_replay`, `test_deadline_fee_and_amount_bounds` |
+| Capital only reaches allowlisted vaults; gated vaults require eligibility | `router::test_vault_must_be_allowlisted`, `test_kyc_vault_requires_eligibility` |
+| Vault deposits must come from the router | `vault::test_deposit_requires_router_auth` |
+| Nested auth for Soroswap and the vault works without mocked signatures | `router::test_swap_leg_with_strict_auth`, `test_deposit_with_strict_auth` |
+| Relayer fee capped (≤ 10% ceiling, 1% configured) | `router::test_router_initialization`, `test_deadline_fee_and_amount_bounds` |
+| Withdrawals stay open while a vault is paused | `vault::test_vault_direct_deposit_and_pause` |
 
-## Architecture Flow
-
-```
-[ EVM / SVM User ]
-        │
-        │ 1. Signs EIP-712 Intent & executes CCTP depositForBurn()
-        ▼
-[ Circle CCTP TokenMessenger ]
-        │
-        │ 2. Emits MessageSent; Circle Iris Attestation validated
-        ▼
-[ Meridian Relayer Daemon ]
-        │
-        │ 3. Fetches Iris attestation signature
-        │ 4. Submits sponsored transaction envelope to Stellar
-        ▼
-[ MeridianRouter.rs (Soroban Host Runtime) ]
-   ├── Settles Paymaster fee reimbursement (USDC)
-   ├── Dispatches multi-hop swap via Soroswap Aggregator V3
-   └── Allocates target assets to:
-         ├── Recipient Stellar Account (G...)
-         ├── Institutional RWA Vault (Blend / Spiko / Centrifuge)
-         └── SEP-24 Anchor Escrow for Direct Bank Settlement
-```
-
----
-
-## Repository Structure
+## Repository
 
 ```
-.
-├── contracts/
-│   ├── router/          # Core cross-chain intent settlement contract
-│   ├── paymaster/       # Gas sponsorship and reserve rebalancer
-│   ├── compliance/      # Institutional KYC and SEP-8 access gate
-│   └── vault/           # Institutional RWA Yield Vault (mTBILL)
-├── deployments/
-│   └── testnet.json     # Live Stellar Soroban Testnet deployment manifest
-├── packages/
-│   └── sdk/             # @meridian-protocol/sdk TypeScript client library
-├── services/
-│   └── relayer/         # Circle Iris attestation listener and transaction relayer
-├── apps/
-│   └── web/             # Next.js 14 web client and dual-wallet interface
-├── scripts/
-│   └── deploy-testnet.mjs # Automated Soroban Testnet deployment & init script
-└── .github/workflows/
-    ├── contracts.yml    # Cargo test and WASM verification pipeline
-    ├── sdk-and-web.yml  # TypeScript typecheck and frontend build pipeline
-    └── deploy-pages.yml # Automated GitHub Pages deployment for Live Demo
+contracts/
+  router/       MeridianRouter: deposits, fast fills, vault allowlist, Soroswap leg
+  vault/        USDC share vault (router-only deposits, manager-distributed yield)
+  compliance/   KYC eligibility registry read by the router
+  paymaster/    Fee accounting + USDC->XLM rebalance through Soroswap
+packages/sdk/   @meridian-protocol/sdk: contract client, CCTP/Iris, DEX, SEP-10/24
+services/relayer/  CLI that checks Circle attestations and fast-fills intents
+apps/web/       Next.js app (Freighter) on GitHub Pages
+scripts/        deploy.mjs (resumable deploy) and e2e-testnet.mjs (live run)
+deployments/    testnet.json manifest and e2e receipts
 ```
 
----
+## Development
 
-## Development & Build Verification
+Prerequisites: Rust with the `wasm32v1-none` target, Node.js 22.
 
-### Prerequisites
-* Rust `1.84+` with target `wasm32v1-none`
-* Node.js `20.x` or higher
-
-### Contracts
 ```bash
-# Execute unit & integration test suite across all contracts
-cargo test --workspace --lib
-
-# Build optimized Soroban WASM binaries
-cargo build --target wasm32v1-none --release
-```
-
-### TypeScript SDK & Relayer
-```bash
-# Install workspace dependencies
 npm install
 
-# Build SDK package
-npm run build --workspace=@meridian-protocol/sdk
+# Contracts: build wasm (router tests import the vault/compliance wasm), then test
+npm run contracts:test
 
-# Build Relayer daemon
-npm run build --workspace=@meridian-protocol/relayer
-```
+# SDK unit tests
+npm run test --workspace=@meridian-protocol/sdk
 
-### Web Application
-```bash
+# Web app
 npm run dev --workspace=@meridian-protocol/web
+
+# Deploy to testnet (creates a funded admin key in the gitignored .env on first run)
+npm run contracts:build && npm run build --workspace=@meridian-protocol/sdk
+npm run deploy:testnet
+
+# Live end-to-end run against the deployed contracts
+npm run e2e:testnet
+
+# Relayer
+npm run build --workspace=@meridian-protocol/relayer
+MERIDIAN_RELAYER_SECRET=S... node services/relayer/dist/index.js info
+MERIDIAN_RELAYER_SECRET=S... node services/relayer/dist/index.js fill --source arbitrum --tx 0x... --recipient G... [--vault C...]
 ```
 
----
-
-## Security Invariants
-
-1. **Conservation of Value**: The router contract never retains unallocated tokens. All inbound minted capital is either routed to the recipient, deposited into the target vault, or returned on failure.
-2. **Strict Replay Prevention**: Every cross-chain intent message hash is recorded upon execution; subsequent invocations with identical hashes immediately revert.
-3. **Bounded Slippage**: Swaps must satisfy `amount_out >= min_amount_out` enforced at both the router and DEX aggregator levels.
-4. **Relayer Fee Caps**: Operational relayer fee deductions cannot exceed `max_relayer_fee_bps` configured by the contract administrator.
-
----
+Never commit `.env` or paste secret keys anywhere; it is gitignored.
 
 ## License
 
