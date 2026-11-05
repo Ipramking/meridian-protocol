@@ -1,17 +1,30 @@
-export interface AnchorAssetInfo {
-  enabled: boolean;
-  minAmount?: number;
-  maxAmount?: number;
-  feeFixed?: number;
-  feePercent?: number;
+import { WebAuth } from '@stellar/stellar-sdk';
+
+/**
+ * SEP-1 / SEP-10 / SEP-24 client. Every step talks to the anchor for real and
+ * throws on failure; nothing is ever substituted with a made-up response.
+ */
+
+export const TEST_ANCHOR_DOMAIN = 'testanchor.stellar.org';
+
+export interface AnchorInfo {
+  domain: string;
+  webAuthEndpoint: string;
+  transferServerSep24: string;
+  signingKey: string;
 }
 
-export interface Sep24InfoResponse {
-  deposit: Record<string, AnchorAssetInfo>;
-  withdraw: Record<string, AnchorAssetInfo>;
-  fee?: {
-    enabled: boolean;
-  };
+export interface Sep24AssetInfo {
+  enabled: boolean;
+  min_amount?: number;
+  max_amount?: number;
+  fee_fixed?: number;
+  fee_percent?: number;
+}
+
+export interface Sep24Info {
+  deposit: Record<string, Sep24AssetInfo>;
+  withdraw: Record<string, Sep24AssetInfo>;
 }
 
 export interface Sep24InteractiveResponse {
@@ -20,125 +33,116 @@ export interface Sep24InteractiveResponse {
   id: string;
 }
 
-export interface SupportedAnchor {
+export interface Sep24Transaction {
   id: string;
-  name: string;
-  domain: string;
-  currencies: string[];
-  regions: string[];
-  isTestnet: boolean;
+  kind: string;
+  status: string;
+  amount_in?: string;
+  amount_out?: string;
+  more_info_url?: string;
 }
 
-export const SUPPORTED_STELLAR_ANCHORS: SupportedAnchor[] = [
-  {
-    id: 'stellar-testnet-anchor',
-    name: 'Stellar Foundation Test Anchor',
-    domain: 'testanchor.stellar.org',
-    currencies: ['USDC', 'SRT', 'NGN'],
-    regions: ['Global (Testnet Sandbox)'],
-    isTestnet: true,
-  },
-  {
-    id: 'cowrie-africa',
-    name: 'Cowrie Integrated Anchor',
-    domain: 'cowrie.exchange',
-    currencies: ['NGN', 'GHS', 'USDC'],
-    regions: ['Nigeria', 'Ghana'],
-    isTestnet: false,
-  },
-  {
-    id: 'mykobo-europe',
-    name: 'Mykobo EURC Anchor',
-    domain: 'mykobo.co',
-    currencies: ['EURC', 'XOF', 'USDC'],
-    regions: ['SEPA Zone / West Africa'],
-    isTestnet: false,
-  },
-];
+async function anchorError(res: Response, what: string): Promise<Error> {
+  let detail = '';
+  try {
+    const body = await res.json();
+    detail = body.error ?? JSON.stringify(body);
+  } catch {
+    detail = res.statusText;
+  }
+  return new Error(`${what} failed (${res.status}): ${detail}`);
+}
 
-export class Sep24Client {
-  private anchorDomain: string;
+/** SEP-1: read the anchor's stellar.toml */
+export async function resolveAnchor(domain: string): Promise<AnchorInfo> {
+  const res = await fetch(`https://${domain}/.well-known/stellar.toml`);
+  if (!res.ok) {
+    throw new Error(`Could not load stellar.toml from ${domain} (${res.status})`);
+  }
+  const toml = await res.text();
+  const read = (key: string) => new RegExp(`^\\s*${key}\\s*=\\s*"([^"]+)"`, 'm').exec(toml)?.[1];
 
-  constructor(anchorDomain = 'testanchor.stellar.org') {
-    this.anchorDomain = anchorDomain;
+  const webAuthEndpoint = read('WEB_AUTH_ENDPOINT');
+  const transferServerSep24 = read('TRANSFER_SERVER_SEP0024');
+  const signingKey = read('SIGNING_KEY');
+  if (!webAuthEndpoint || !transferServerSep24 || !signingKey) {
+    throw new Error(`${domain} does not advertise SEP-10 and SEP-24 in its stellar.toml`);
+  }
+  return { domain, webAuthEndpoint, transferServerSep24, signingKey };
+}
+
+/**
+ * SEP-10 step 1: fetch the challenge and verify it before anyone signs it
+ * (server signature, home domain, web auth domain, no unexpected operations).
+ */
+export async function getSep10Challenge(
+  anchor: AnchorInfo,
+  account: string,
+  networkPassphrase: string
+): Promise<string> {
+  const res = await fetch(`${anchor.webAuthEndpoint}?account=${encodeURIComponent(account)}`);
+  if (!res.ok) throw await anchorError(res, 'SEP-10 challenge');
+  const body = (await res.json()) as { transaction: string; network_passphrase?: string };
+  if (body.network_passphrase && body.network_passphrase !== networkPassphrase) {
+    throw new Error(`Anchor is on a different network: ${body.network_passphrase}`);
   }
 
-  /**
-   * Resolves transfer server URL from anchor stellar.toml
-   */
-  public async getTransferServerUrl(): Promise<string> {
-    const tomlUrl = `https://${this.anchorDomain}/.well-known/stellar.toml`;
-    try {
-      const res = await fetch(tomlUrl);
-      if (!res.ok) {
-        throw new Error(`Failed to fetch stellar.toml (${res.status})`);
-      }
-      const tomlText = await res.text();
-      const match = tomlText.match(/TRANSFER_SERVER_SEP0024\s*=\s*"([^"]+)"/);
-      if (match && match[1]) {
-        return match[1];
-      }
-      // Fallback standard path
-      return `https://${this.anchorDomain}/sep24`;
-    } catch {
-      return `https://${this.anchorDomain}/sep24`;
-    }
-  }
+  WebAuth.readChallengeTx(
+    body.transaction,
+    anchor.signingKey,
+    networkPassphrase,
+    anchor.domain,
+    new URL(anchor.webAuthEndpoint).host
+  );
+  return body.transaction;
+}
 
-  /**
-   * Fetches supported assets and limits via SEP-24 /info
-   */
-  public async getInfo(): Promise<Sep24InfoResponse> {
-    const baseUrl = await this.getTransferServerUrl();
-    const res = await fetch(`${baseUrl}/info`);
-    if (!res.ok) {
-      // Return structured default schema for testnet anchor if offline
-      return {
-        deposit: {
-          USDC: { enabled: true, minAmount: 1, maxAmount: 100000 },
-          NGN: { enabled: true, minAmount: 1000, maxAmount: 50000000 },
-        },
-        withdraw: {
-          USDC: { enabled: true, minAmount: 1, maxAmount: 100000 },
-          NGN: { enabled: true, minAmount: 1000, maxAmount: 50000000 },
-        },
-      };
-    }
-    return (await res.json()) as Sep24InfoResponse;
-  }
+/** SEP-10 step 2: exchange the client-signed challenge for a JWT */
+export async function getSep10Token(anchor: AnchorInfo, signedChallengeXdr: string): Promise<string> {
+  const res = await fetch(anchor.webAuthEndpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ transaction: signedChallengeXdr }),
+  });
+  if (!res.ok) throw await anchorError(res, 'SEP-10 token');
+  const { token } = (await res.json()) as { token: string };
+  return token;
+}
 
-  /**
-   * Initiates an interactive withdrawal session for local fiat off-ramp
-   */
-  public async initiateWithdraw(params: {
-    assetCode: string;
-    account: string;
-    amount?: string;
-  }): Promise<Sep24InteractiveResponse> {
-    const baseUrl = await this.getTransferServerUrl();
-    try {
-      const form = new URLSearchParams();
-      form.append('asset_code', params.assetCode);
-      form.append('account', params.account);
-      if (params.amount) form.append('amount', params.amount);
+export async function getSep24Info(anchor: AnchorInfo): Promise<Sep24Info> {
+  const res = await fetch(`${anchor.transferServerSep24}/info`);
+  if (!res.ok) throw await anchorError(res, 'SEP-24 info');
+  return (await res.json()) as Sep24Info;
+}
 
-      const res = await fetch(`${baseUrl}/transactions/withdraw/interactive`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: form.toString(),
-      });
+/** SEP-24: start an authenticated interactive withdrawal (off-ramp) */
+export async function startSep24Withdraw(
+  anchor: AnchorInfo,
+  token: string,
+  params: { assetCode: string; account: string; amount?: string }
+): Promise<Sep24InteractiveResponse> {
+  const res = await fetch(`${anchor.transferServerSep24}/transactions/withdraw/interactive`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({
+      asset_code: params.assetCode,
+      account: params.account,
+      ...(params.amount ? { amount: params.amount } : {}),
+    }),
+  });
+  if (!res.ok) throw await anchorError(res, 'SEP-24 withdraw');
+  return (await res.json()) as Sep24InteractiveResponse;
+}
 
-      if (res.ok) {
-        return (await res.json()) as Sep24InteractiveResponse;
-      }
-    } catch {
-      // Fallback to simulated interactive portal URL
-    }
-
-    return {
-      type: 'interactive_customer_info_needed',
-      url: `https://${this.anchorDomain}/sep24/interactive?asset=${params.assetCode}&dest=${params.account}`,
-      id: `sep24_${Date.now()}`,
-    };
-  }
+export async function getSep24Transaction(
+  anchor: AnchorInfo,
+  token: string,
+  id: string
+): Promise<Sep24Transaction> {
+  const res = await fetch(`${anchor.transferServerSep24}/transaction?id=${encodeURIComponent(id)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw await anchorError(res, 'SEP-24 transaction');
+  const { transaction } = (await res.json()) as { transaction: Sep24Transaction };
+  return transaction;
 }

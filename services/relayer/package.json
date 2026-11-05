@@ -1,7 +1,7 @@
 {
   "name": "@meridian-protocol/relayer",
   "version": "0.1.0",
-  "description": "Background Attestation Watcher & Soroban Transaction Relayer for Meridian Protocol",
+  "description": "Meridian relayer: waits for Circle CCTP attestations and fast-fills intents on Stellar",
   "main": "./dist/index.js",
   "scripts": {
     "start": "tsc && node dist/index.js",
@@ -11,9 +11,8 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@meridian-protocol/sdk": "*",
-    "@stellar/stellar-sdk": "^12.3.0",
-    "dotenv": "^16.4.5",
-    "ethers": "^6.13.0"
+    "@stellar/stellar-sdk": "^17.4.0",
+    "dotenv": "^16.4.5"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

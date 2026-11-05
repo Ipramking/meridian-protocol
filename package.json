@@ -2,7 +2,7 @@
   "name": "meridian-protocol",
   "version": "1.0.0",
   "private": true,
-  "description": "Cross-Chain Capital Gateway & Intent Router for Stellar Soroban RWAs, Yield, and Fiat Anchors",
+  "description": "Cross-chain capital router for Stellar: CCTP fast-fills, allowlisted USDC vaults, KYC gating and SEP-24 off-ramp",
   "workspaces": [
     "packages/*",
     "services/*",
@@ -10,10 +10,11 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces",
-    "test": "cargo test && npm run test --workspaces",
-    "test:e2e": "node scripts/test-cctp-flow.mjs",
-    "contracts:build": "cargo build --target wasm32-unknown-unknown --release",
-    "contracts:test": "cargo test",
+    "test": "npm run contracts:test && npm run test --workspace=@meridian-protocol/sdk",
+    "contracts:build": "cargo build --target wasm32v1-none --release",
+    "contracts:test": "cargo build --target wasm32v1-none --release && cargo test --workspace --lib",
+    "deploy:testnet": "node scripts/deploy.mjs --network testnet",
+    "e2e:testnet": "node scripts/e2e-testnet.mjs",
     "seed:issues": "node issues/seed-issues.js"
   },
   "keywords": [

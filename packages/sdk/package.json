@@ -1,7 +1,7 @@
 {
   "name": "@meridian-protocol/sdk",
   "version": "0.1.0",
-  "description": "TypeScript SDK for Meridian Protocol Cross-Chain Routing & Soroban RWA Onboarding",
+  "description": "TypeScript SDK for Meridian Protocol: router/vault clients, CCTP quotes, DEX helpers, SEP-10/24",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -13,13 +13,13 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "node --test"
+    "test": "tsc && node --test test/"
   },
   "author": "Ipramking <inioluwasamuel.13pram@gmail.com>",
   "license": "Apache-2.0",
   "dependencies": {
-    "@stellar/stellar-sdk": "^12.3.0",
-    "ethers": "^6.13.0"
+    "@stellar/stellar-sdk": "^17.4.0",
+    "buffer": "^6.0.3"
   },
   "devDependencies": {
     "typescript": "^5.5.0",

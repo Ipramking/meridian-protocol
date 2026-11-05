@@ -1,44 +1,50 @@
 {
-  "network": "Stellar Soroban Testnet",
-  "rpcUrl": "https://soroban-testnet.stellar.org",
-  "networkPassphrase": "Test SDF Network ; September 2015",
-  "deployerPublicKey": "GCAAHYYUW26D63RKTKAFNEGKMQFH7UTV544D3QF4GH6PTUBCTSGDIWW5",
-  "deployedAt": "2026-11-01T14:47:45.860Z",
+  "network": "testnet",
+  "deployedAt": "2026-11-05T17:55:36.532Z",
+  "admin": "GDLTNOEQAQ6C5YRXMCA4VGSFPH55ZBBPUNYTX7OPUYQGWAGTHD4N57LC",
   "contracts": {
-    "meridianRouter": {
-      "contractId": "CATRAXQGN7H73LDWWLUW3IBDNZG2XYQEUIVROC2UDOQ6XRPYEKK2WUED",
-      "wasmHash": "5feb037a7dd5a85e75e804b16f0b358a19558943939f1483f501c38b945bad55",
-      "wasmUploadTx": "ed9a5bae25a75268cf8754a20b3f4b2dc7d0adbcfaa93255c2fe2886149036cd",
-      "createContractTx": "97ed2a1d3945a1fc6c0ca33fbdd95c2b63a960b85bdc7b8c243804e106b1beb6",
-      "initTx": "ceff2fcbb1c61eac260f1bcf7883255d06fd658f7e7ef31d965b2700f2277b98",
-      "explorerUrl": "https://stellar.expert/explorer/testnet/contract/CATRAXQGN7H73LDWWLUW3IBDNZG2XYQEUIVROC2UDOQ6XRPYEKK2WUED"
+    "router": "CD6BDASBGQNDY6K66ZWG5IVOZXAAJ3IWD2WWEA25KF6R6UTU6ZUWBOCR",
+    "compliance": "CAHUSTNCX7KAQSB5P4AAFUTWCPJ5H2FEUAOX5RPGCVZO4E24TO5BQZFC",
+    "paymaster": "CDIK7H27J4BCVQWSPMALTPXNVBRUZSCLR3PGCFCOVG2AJMY2RLN3C2AK"
+  },
+  "vaults": [
+    {
+      "id": "open",
+      "contractId": "CAYGFI63GSSZL2PRN4QZ37UAQ6ITAPARJ4WDAO27765GWP2QNDW3LF6L",
+      "name": "Meridian Open USDC Vault",
+      "symbol": "mvUSDC",
+      "requiresKyc": false
     },
-    "meridianPaymaster": {
-      "contractId": "CCZIOZNGCPEB5KQSQW4DECO3AFTNXLTAOECAR3ZBS3QVIG4KSMUS2S6I",
-      "wasmHash": "7fdfeb22c0aa35c7c104579eb3cbecb48adcd2057e4edcf2608c65a0f0a64747",
-      "wasmUploadTx": "e233bbb9aea271d8b0cea46293e591026dd7cae5536c574ab5cc4eefb160c3d3",
-      "createContractTx": "dacc7fee382ea17eb82552100ff06551b11e681cb3838068c4756a565f07fc05",
-      "initTx": "1b906928f8423400fa6f954c5edafbe022f2530074bda462a1b3122a83ef5424",
-      "explorerUrl": "https://stellar.expert/explorer/testnet/contract/CCZIOZNGCPEB5KQSQW4DECO3AFTNXLTAOECAR3ZBS3QVIG4KSMUS2S6I"
-    },
-    "meridianCompliance": {
-      "contractId": "CB65GHAERYSDNPGZYMEPESEKGC3PKL6UNOPYAZV6QUFW37OL7J24YU2S",
-      "wasmHash": "641c2aaeb25d764bdcb9a488628b0845f4a02dba4abef8263d3d975a3ce361ba",
-      "wasmUploadTx": "dcfbdac970c6ffdc64ec67b1a7ac9b76ba154312eaf63c3557f0d94bd6fc4fb6",
-      "createContractTx": "d84e11cb4eb95354a1d37ffd18c3492ecd34120b22f17ae43408d94fd1c1710c",
-      "initTx": "9e0729de3da687076c282acbdb04fe762e2cbb81f6d8fef27fb7ea8acbfff031",
-      "explorerUrl": "https://stellar.expert/explorer/testnet/contract/CB65GHAERYSDNPGZYMEPESEKGC3PKL6UNOPYAZV6QUFW37OL7J24YU2S"
-    },
-    "meridianVault": {
-      "contractId": "CC4IZUGVELOW5Z7OBUSZWQSPBPM64IQYFA52YQZ7WGFVDMWRVO4OYAGK",
-      "wasmHash": "7b187c77142e232b4086d5ba1eb1391926902f9997d38211c1247c4df02fc2f6",
-      "wasmUploadTx": "92a052d9a0bf8f7ba512faee882c5b6d9f4c4b331561bfd6e7ce74a50b51f29c",
-      "createContractTx": "fe5172a033ec825081ef13a3cc0688abcf80e58ed065c5de21c93bd888883e18",
-      "initTx": "65574d14cca2f612cc8ae74f0bdf94e9de128be7e948c1c429da955e0ef409d5",
-      "underlyingAsset": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
-      "router": "CATRAXQGN7H73LDWWLUW3IBDNZG2XYQEUIVROC2UDOQ6XRPYEKK2WUED",
-      "apyEstimate": "4.25%",
-      "explorerUrl": "https://stellar.expert/explorer/testnet/contract/CC4IZUGVELOW5Z7OBUSZWQSPBPM64IQYFA52YQZ7WGFVDMWRVO4OYAGK"
+    {
+      "id": "accredited",
+      "contractId": "CCTCBCSN2YT4UWGFI6XEL3P3TPZOKCXEWQAP4NCA4Q5B46ODE77DPPQH",
+      "name": "Meridian Accredited USDC Vault",
+      "symbol": "maUSDC",
+      "requiresKyc": true
     }
+  ],
+  "wasmHashes": {
+    "router": "3865b1326f3fa1a37604fc1b2ac970e0b3d8f2c21cead6e1d8d0132d91ecc42d",
+    "vault": "92cfcd409b1653a37e9e9eb9a74a8a0e52b978c2c887691d083bf7a8263b455f",
+    "compliance": "9cf80c10d62f0d194e0ab3c0ab0081cf95d7442edfe6535b7910533484cca9d3",
+    "paymaster": "6fd906b1ea9242faa2c8fde94aa67fc2fc4d31c3da1b50a719d67791fb02b761"
+  },
+  "txs": {
+    "routerUpload": "4bf2c6ab915e31470edc1019b8c3b6f28410db864ca04390e3a7afd8f0ce8867",
+    "vaultUpload": "f9bec2ac5d0cad2d0fe3b5e90f2544a4d30c410f01db8cec1460cb2706c944fc",
+    "complianceUpload": "8c33b18985ebd84cecdc67981edf131c138cdccde5c68d97e226038823f8a8cb",
+    "paymasterUpload": "921776edfc33ebb65b7c6f51f9dcb3ce24eef92efca53e434b8f407acea6c283",
+    "complianceCreate": "ef7bf2f7d7403543abac36727f407c9ddc40cfa7eaf5438297b1800496d9198e",
+    "routerCreate": "9b466ff7e37d86c073478633f11834688824ca7bbdaccc01e226f38cd83a7771",
+    "paymasterCreate": "37261e7d812b4e913fd73fc8d4f9bdd8709b3a372be25c8cf1c9f9c377b54296",
+    "openVaultCreate": "91ef9047cff0dd182065a0418b2ab54306ba8eb3561f7cd9b0fa61d4bb9755e4",
+    "accreditedVaultCreate": "ac10d285f4c4c177fc1bad2b833a8647771dca20f35f461581e26ecb555c58d6",
+    "complianceInit": "db4c7cf49278b9eb1cae9e6b0513cb09f360f0ffda1a74eefd514d494cd0b2a4",
+    "routerInit": "c82ec125db855e86a0fe67a84bd8cab3f57dd4fae767903b61be68f8f29cd211",
+    "openVaultInit": "e63c2a762cfd3807dab8a568343f9f8ab5d6793796f31aa74979550c193bad2a",
+    "openVaultAllowlist": "a0816f0918272218f810a1d195ffb3afd6913480d6f69517d676fd26c7a919aa",
+    "accreditedVaultInit": "d0ff02dfd5e9738171c151ff875de48a4c9ffd3220abff571d574c0d3e48a999",
+    "accreditedVaultAllowlist": "e12b1901bf1581b1ce0dc70165b9f6b9ebc65b09cd8dba3b041caefc6f3968f6",
+    "paymasterInit": "3260a81c9e7c3e9590a6d0930bf5ee53728d25ac9bac952f1a84f7895a5cb008"
   }
 }
