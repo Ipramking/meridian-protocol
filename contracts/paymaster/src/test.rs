@@ -1,16 +1,26 @@
 use super::*;
 use soroban_sdk::{
-    contract, contractimpl,
+    contract, contractimpl, symbol_short,
     testutils::Address as _,
     token::{Client as TokenClient, StellarAssetClient},
     Address, Env, Vec,
 };
 
+/// Mirrors the real Soroswap router: `to.require_auth()`, then the input token is
+/// transferred FROM `to` straight into the pair.
 #[contract]
 pub struct MockSoroswapRouter;
 
 #[contractimpl]
 impl MockSoroswapRouter {
+    pub fn router_pair_for(env: Env, _token_a: Address, _token_b: Address) -> Address {
+        env.storage().instance().get(&symbol_short!("pair")).unwrap()
+    }
+
+    pub fn set_pair(env: Env, pair: Address) {
+        env.storage().instance().set(&symbol_short!("pair"), &pair);
+    }
+
     pub fn swap_exact_tokens_for_tokens(
         env: Env,
         amount_in: i128,
@@ -19,12 +29,13 @@ impl MockSoroswapRouter {
         to: Address,
         _deadline: u64,
     ) -> Vec<i128> {
+        to.require_auth();
         let token_in = path.get(0).unwrap();
         let token_out = path.get(path.len() - 1).unwrap();
+        let pair: Address = env.storage().instance().get(&symbol_short!("pair")).unwrap();
 
-        // Pull USDC from Paymaster using allowance
         let in_client = TokenClient::new(&env, &token_in);
-        in_client.transfer_from(&env.current_contract_address(), &to, &env.current_contract_address(), &amount_in);
+        in_client.transfer(&to, &pair, &amount_in);
 
         // Simulate 1 USDC = 10 XLM conversion rate
         let xlm_out = amount_in * 10;
@@ -122,6 +133,8 @@ fn test_rebalance_native_swaps_accumulated_usdc_for_xlm() {
     let (xlm_addr, xlm_token, xlm_admin) = create_token(&env, &token_admin);
 
     let soroswap_id = env.register(MockSoroswapRouter, ());
+    let pair = Address::generate(&env);
+    MockSoroswapRouterClient::new(&env, &soroswap_id).set_pair(&pair);
     // Fund MockSoroswapRouter with XLM liquidity
     xlm_admin.mint(&soroswap_id, &10_000_000_000);
 
@@ -146,6 +159,7 @@ fn test_rebalance_native_swaps_accumulated_usdc_for_xlm() {
     // Verify remaining accumulated USDC fees and XLM reserve balance
     assert_eq!(client.get_accumulated_fees(), 50_000_000);
     assert_eq!(usdc_token.balance(&contract_id), 50_000_000);
+    assert_eq!(usdc_token.balance(&pair), 150_000_000);
     assert_eq!(xlm_token.balance(&contract_id), 1_500_000_000);
 }
 

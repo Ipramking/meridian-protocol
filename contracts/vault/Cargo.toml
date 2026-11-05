@@ -3,7 +3,7 @@ name = "meridian-vault"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-description = "Institutional RWA & Yield Vault Contract (SEP-41 / Soroban Vault Standard) for Meridian Protocol"
+description = "USDC share vault for Meridian Protocol (router-only deposits, manager-distributed yield)"
 
 [lib]
 crate-type = ["cdylib"]

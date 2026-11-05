@@ -7,7 +7,9 @@ mod test;
 
 use storage::{DataKey, PaymasterConfig};
 use soroban_sdk::{
-    contract, contracterror, contractimpl, symbol_short, token, Address, Env, IntoVal, Symbol, Val, Vec,
+    auth::{ContractContext, InvokerContractAuthEntry, SubContractInvocation},
+    contract, contracterror, contractimpl, symbol_short, token, vec, Address, Env, IntoVal, Symbol,
+    Val, Vec,
 };
 
 #[contracterror]
@@ -194,14 +196,24 @@ impl MeridianPaymaster {
         path.push_back(config.usdc_token.clone());
         path.push_back(config.native_token.clone());
 
-        // Approve Soroswap Router to spend USDC
-        let usdc_client = token::Client::new(&env, &config.usdc_token);
-        usdc_client.approve(
-            &env.current_contract_address(),
+        // Soroswap pulls USDC from `to` (this contract) into the pair, so that
+        // nested transfer must be pre-authorized for the current contract.
+        let pair: Address = env.invoke_contract(
             &config.soroswap_router,
-            &amount_to_swap,
-            &(env.ledger().sequence() + 100),
+            &Symbol::new(&env, "router_pair_for"),
+            vec![&env, config.usdc_token.to_val(), config.native_token.to_val()],
         );
+        env.authorize_as_current_contract(vec![
+            &env,
+            InvokerContractAuthEntry::Contract(SubContractInvocation {
+                context: ContractContext {
+                    contract: config.usdc_token.clone(),
+                    fn_name: Symbol::new(&env, "transfer"),
+                    args: (env.current_contract_address(), pair, amount_to_swap).into_val(&env),
+                },
+                sub_invocations: Vec::new(&env),
+            }),
+        ]);
 
         let swap_args: Vec<Val> = (
             amount_to_swap,

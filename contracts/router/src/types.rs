@@ -5,10 +5,18 @@ use soroban_sdk::{contracttype, Address, BytesN, Vec};
 pub struct RouterConfig {
     pub admin: Address,
     pub usdc_token: Address,
-    pub cctp_forwarder: Address,
     pub soroswap_router: Address,
+    pub compliance: Address,
     pub max_relayer_fee_bps: u32,
     pub paused: bool,
+}
+
+/// Routing policy for a destination vault. Only allowlisted vaults can receive capital.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct VaultPolicy {
+    pub enabled: bool,
+    pub requires_kyc: bool,
 }
 
 #[contracttype]
@@ -25,10 +33,19 @@ pub struct CrossChainIntent {
     pub relayer_fee: i128,
 }
 
+/// Record of a filled intent, keyed by its order id.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Fill {
+    pub relayer: Address,
+    pub amount_out: i128,
+    pub ledger: u32,
+}
+
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DataKey {
     Config,
-    Nonce(Address),
-    ProcessedMessage(BytesN<32>),
+    Vault(Address),
+    Fill(BytesN<32>),
 }
