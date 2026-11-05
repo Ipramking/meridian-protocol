@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: TypeScript Build & Typecheck
+    name: TypeScript Build & Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,18 +17,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: 'npm'
 
       - name: Install Dependencies
-        run: npm install --legacy-peer-deps
+        run: npm ci
 
-      - name: Build SDK
-        run: npm run build --workspace=@meridian-protocol/sdk
+      - name: Build and test SDK
+        run: npm run test --workspace=@meridian-protocol/sdk
 
       - name: Build Relayer
         run: npm run build --workspace=@meridian-protocol/relayer
 
       - name: Build Web App
         run: npm run build --workspace=@meridian-protocol/web
-
-      - name: Run E2E Integration Pipeline Test
-        run: node scripts/test-cctp-flow.mjs

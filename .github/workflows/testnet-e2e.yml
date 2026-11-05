@@ -1,0 +1,29 @@
+name: Testnet E2E
+
+# Live run against the deployed testnet contracts: buys testnet USDC on the DEX,
+# deposits through the router, withdraws, checks the KYC gate and fills an intent.
+# Not on every push, because it depends on testnet, Friendbot and DEX liquidity.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1'
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Build SDK
+        run: npm run build --workspace=@meridian-protocol/sdk
+
+      # Without MERIDIAN_ADMIN_SECRET the KYC-approval step is reported as skipped
+      - name: Run live e2e
+        run: node scripts/e2e-testnet.mjs

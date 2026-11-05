@@ -22,8 +22,9 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
 
-      - name: Run Cargo Tests
-        run: cargo test --workspace --lib --verbose
-
+      # Router integration tests load the vault and compliance wasm via contractimport!
       - name: Build WASM Contracts
         run: cargo build --target wasm32v1-none --release
+
+      - name: Run Cargo Tests
+        run: cargo test --workspace --lib
