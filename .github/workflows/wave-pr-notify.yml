@@ -1,0 +1,25 @@
+name: Drips Wave PR Merge Notification
+
+on:
+  pull_request_target:
+    types: [closed]
+
+jobs:
+  notify-wave-merge:
+    name: Notify Slack & Discord on Wave Merge
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Dispatch Slack / Discord notification
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: node scripts/notify-wave-merge.mjs
