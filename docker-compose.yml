@@ -1,0 +1,41 @@
+services:
+  stellar-quickstart:
+    image: stellar/quickstart:latest
+    container_name: meridian-stellar-quickstart
+    command:
+      - --local
+      - --enable
+      - rpc,horizon
+      - --protocol-version
+      - "22"
+    ports:
+      - "${STELLAR_QUICKSTART_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+
+  meridian-relayer:
+    image: node:20-alpine
+    container_name: meridian-relayer
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+    environment:
+      MERIDIAN_NETWORK: "${MERIDIAN_NETWORK:-testnet}"
+      MERIDIAN_RPC_URL: "${MERIDIAN_RPC_URL:-https://soroban-testnet.stellar.org}"
+      MERIDIAN_RELAYER_SECRET: "${MERIDIAN_RELAYER_SECRET:-}"
+      MERIDIAN_BURN_TX: "${MERIDIAN_BURN_TX:-}"
+      MERIDIAN_SOURCE_CHAIN: "${MERIDIAN_SOURCE_CHAIN:-base}"
+      MERIDIAN_RECIPIENT: "${MERIDIAN_RECIPIENT:-}"
+      MERIDIAN_VAULT: "${MERIDIAN_VAULT:-}"
+    command: >
+      sh -c "npm run build --workspace=@meridian-protocol/sdk &&
+             npm run start --workspace=@meridian-protocol/relayer"
+    depends_on:
+      stellar-quickstart:
+        condition: service_healthy
+    restart: "no"
